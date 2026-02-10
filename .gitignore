@@ -1,7 +1,9 @@
 build/
 ffmepg-*/
 FFVS-Project-Generator/
-windows-builder/
 
+
+windows-builder/*
+!windows-builder/
 !windows-builder/project_generate.exe
 !windows-builder/smp_project_get_dependencies
