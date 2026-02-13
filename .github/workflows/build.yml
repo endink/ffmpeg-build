@@ -266,7 +266,7 @@ jobs:
             echo "Use ${{ env.PROJ_NAME }} Version: ${GITHUB_REF_NAME#v}"
           else
             echo "TARGET_VERSION=${{ inputs.target-version }}" >> $GITHUB_ENV
-            echo "Use ${{ env.PROJ_NAME } Version: ${{ inputs.target-version }}"
+            echo "Use ${{ env.PROJ_NAME }} Version: ${{ inputs.target-version }}"
           fi
       - uses: actions/download-artifact@v4
         with:
