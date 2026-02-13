@@ -8,7 +8,7 @@ SET CURRDIR=%CD%
 
 if not defined VC_VERSION set "VC_VERSION=14.38.33130"
 if not defined WIN_SDK_VERSION set "WIN_SDK_VERSION=10.0.22621.0"
-if not defined FFMPEG_VERSION set "FFMPEG_VERSION=7.1.3"
+if not defined FFMPEG_VERSION set "FFMPEG_VERSION=4.4.6"
 
 if not "%~1"=="" set "MS_BUILD_TYPE=%~1"
 
@@ -18,9 +18,11 @@ if not defined MS_BUILD_TYPE set "MS_BUILD_TYPE=static"
 if /I "%MS_BUILD_TYPE%"=="shared" (
     set MSBUILD_CONFIG_TYPE=DynamicLibrary
     set MSBUILD_CONFIG=ReleaseDLLStaticDeps
+    SET "STATIC_OR_SHARED=--disable-static --enable-shared"
 ) else (
     set MSBUILD_CONFIG=Release
     set MSBUILD_CONFIG_TYPE=StaticLibrary
+    SET "STATIC_OR_SHARED=--enable-static --disable-shared"
 )
 
 echo BUILD TYPE: %MSBUILD_CONFIG_TYPE%
@@ -95,7 +97,8 @@ vorbis, ^
 zlib ^
 )
 
-SET "STATIC_OR_SHARED=--enable-static --disable-shared"
+
+
 
 
 SET PGOPTIONS=^
@@ -179,7 +182,8 @@ SET PGOPTIONS=^
 --disable-protocols ^
 --enable-protocol=file ^
  ^
---disable-muxers
+--disable-muxers ^
+--enable-muxer=mp4
 
 SET "PGOPTIONS=%PGOPTIONS% %STATIC_OR_SHARED%"
 
@@ -235,7 +239,7 @@ set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:Platform=x64"
 set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:VCToolsVersion=%VC_VERSION%"
 set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
 
-if /I NOT "%CI%"=="true" (
+if /I "%CI%"=="true" (
     set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /v:q"
 )
 
@@ -264,9 +268,9 @@ SET liblzma_SLN=%SOURCE_DIR%\liblzma\SMP\liblzma.sln
 
 echo Start MSbuild ...
 
-msbuild "%libzlib_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
-msbuild "%libbz2_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
-msbuild "%liblzma_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
+msbuild "%libzlib_SLN%" %DEPS_BUILD_ARGS% || GOTO exit
+msbuild "%libbz2_SLN%" %DEPS_BUILD_ARGS% || GOTO exit
+msbuild "%liblzma_SLN%" %DEPS_BUILD_ARGS% || GOTO exit
 
 pushd "%BUILDER_DIR%"
 
@@ -283,7 +287,7 @@ popd
 
 @ECHO ON
 REM msbuild "%FFMEPG_SLN%" -t:rebuild %MSBUILD_ARGS%
-msbuild "%FFMEPG_SLN%" !FFMPEG_BUILD_ARGS! || GOTO exit
+msbuild "%FFMEPG_SLN%" %FFMPEG_BUILD_ARGS% || GOTO exit
 @ECHO OFF
 
 if exist "%INSTALL_DIR%" (
@@ -343,5 +347,5 @@ REM Check if this was launched from an existing terminal or directly from .bat
 REM  If launched by executing the .bat then pause on completion
 cd %CURRDIR%
 ECHO %CMDCMDLINE% | FINDSTR /L %COMSPEC% >NUL 2>&1
-IF %ERRORLEVEL% == 0 IF "%~1"=="" PAUSE
+IF %ERRORLEVEL% == 0 if /I NOT "%CI%"=="true" PAUSE
 EXIT /B %ERROR%
