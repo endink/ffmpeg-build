@@ -201,7 +201,7 @@ jobs:
        
       # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
       - name: Install VS 17.8.6 Build Tools
-        if: if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' && steps.vs-cache.outputs.cache-hit != 'true' }}
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' && steps.vs-cache.outputs.cache-hit != 'true' }}
         shell: cmd
         run: |
           echo Downloading VS Build Tools...
