@@ -145,11 +145,12 @@ for ANDROID_ABI in "${ABIS[@]}"; do
     export CXX="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang++"
     export AR="$TOOLCHAIN/bin/llvm-ar"
     export STRIP="$TOOLCHAIN/bin/llvm-strip"
-    export LD="$TOOLCHAIN/bin/ld"
+    # export LD="$TOOLCHAIN/bin/ld"
+    export LD="$CC"
 
     export CFLAGS="$CFLAGS -fPIC -DANDROID"
     export CXXFLAGS="$CXXFLAGS -fPIC -DANDROID"
-    export LDFLAGS="$LDFLAGS -static-libstdc++ -fPIC"
+    export LDFLAGS="$LDFLAGS -static-libstdc++ -fPIC -Wl,--gc-sections"
 
     # 创建 ABI 目录
     mkdir -p "$LIBDIR"
@@ -172,6 +173,7 @@ for ANDROID_ABI in "${ABIS[@]}"; do
         --sysroot=$SYSROOT \
         --cc=$CC \
         --cxx=$CXX \
+        --strip=$STRIP \
         --prefix="$INSTALL_DIR" \
         --incdir="$INSTALL_DIR/include" \
         --libdir="$LIBDIR" \
