@@ -41,26 +41,6 @@ if /I "%CI%"=="true" (
 )
 
 
-if defined FFMPEG_DIR (
-    if not "%FFMPEG_DIR%"=="" (
-        SET "FFMPEG_DIR=%FFMPEG_DIR:/=\%"
-        if exist "%FFMPEG_DIR%" (
-            set "TARGET_LINK=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%"
-
-            if exist "%TARGET_LINK%" (
-                echo Removing existing directory...
-                rmdir /s /q "%TARGET_LINK%"
-            )
-
-            mklink /D "%TARGET_LINK%" "%FFMPEG_DIR%"
-            if errorlevel 1 (
-                echo Failed to create symlink
-                exit /b 1
-            )
-        )
-    )
-)
-
 SET "FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%"
 
 if not exist "%FFMPEG_DIR%" (

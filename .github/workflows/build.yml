@@ -169,6 +169,17 @@ jobs:
       - name: Checkout
         if: ${{ steps.eval.outputs.enabled == 'true' }}
         uses: actions/checkout@v4
+        
+      
+          
+      - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: FFmpeg/FFmpeg
+          submodules: true
+          ref: n${{ env.TARGET_VERSION }}
+          path: ${{ env.GITHUB_WORKSPACE }}/windows-builder/src/ffmpeg-${{ env.TARGET_VERSION }}
        
       # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
       - name: Install VS 17.8.6 Build Tools
@@ -212,15 +223,6 @@ jobs:
           where msbuild
           where cl
           echo VS environment ready
-          
-      - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
-        if: ${{ steps.eval.outputs.enabled == 'true' }}
-        uses: actions/checkout@v4
-        with:
-          repository: FFmpeg/FFmpeg
-          submodules: true
-          ref: n${{ env.TARGET_VERSION }}
-          path: ffmpeg
           
 
       - name: Setup GCC
