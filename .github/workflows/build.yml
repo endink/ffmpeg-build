@@ -168,14 +168,27 @@ jobs:
         if: ${{ steps.eval.outputs.enabled == 'true' }}
         uses: actions/checkout@v4
           
-      # - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
-      #   if: ${{ steps.eval.outputs.enabled == 'true' }}
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: FFmpeg/FFmpeg
-      #     submodules: true
-      #     ref: n${{ env.TARGET_VERSION }}
-      #     path: windows-builder/src/ffmpeg-${{ env.TARGET_VERSION }}
+      - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: FFmpeg/FFmpeg
+          submodules: true
+          ref: n${{ env.TARGET_VERSION }}
+          path: ffmpeg
+          
+      - name: Move FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set "TARGET_DIR=windows-builder\src\ffmpeg-%TARGET_VERSION%"
+        
+          if not exist windows-builder\src (
+              mkdir windows-builder\src
+          )
+        
+          move ffmpeg "%TARGET_DIR%"
+          DIR "%TARGET_DIR%"
        
       # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
       - name: Install VS 17.8.6 Build Tools
