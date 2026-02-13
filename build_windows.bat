@@ -209,13 +209,13 @@ CALL :makeGetDeps || GOTO exit
 
 REM Get/Update any used dependency libraries
 
-IF /I "%GITHUB_ACTIONS%"=="true" (
+IF /I "%CI%"=="true" (
     ECHO CI detected - auto updating dependencies
     ECHO.
     CALL :getDeps || GOTO exit
 ) ELSE (
     SET USERPROMPT=N
-    SET /P USERPROMPT=Do you want to download/update the required dependency projects (Y/N)?
+    SET /P "USERPROMPT=Do you want to download/update the required dependency projects (Y/N)?"
     IF /I "%USERPROMPT%"=="Y" (
         ECHO.
         CALL :getDeps || GOTO exit
