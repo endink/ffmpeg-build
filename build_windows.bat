@@ -32,24 +32,36 @@ SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
 
 
 if /I "%CI%"=="true" (
-    if defined OUTPUT_DIR set "INSTALL_DIR=%OUTPUT_DIR%"
+    if defined OUTPUT_DIR set "INSTALL_DIR=%OUTPUT_DIR:/=\%"
     
     
     echo Running inside CI environment
-    echo Output Dir: %OUTPUT_DIR%
+    echo Output Dir: %INSTALL_DIR%
     echo.
 )
 
 
 if defined FFMPEG_DIR (
     if not "%FFMPEG_DIR%"=="" (
-        if exist "%FFMPEG_DIR%\" (
-            mklink /D "%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%" "%FFMPEG_DIR%"
+        SET "FFMPEG_DIR=%FFMPEG_DIR:/=\%"
+        if exist "%FFMPEG_DIR%" (
+            set "TARGET_LINK=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%"
+
+            if exist "%TARGET_LINK%" (
+                echo Removing existing directory...
+                rmdir /s /q "%TARGET_LINK%"
+            )
+
+            mklink /D "%TARGET_LINK%" "%FFMPEG_DIR%"
+            if errorlevel 1 (
+                echo Failed to create symlink
+                exit /b 1
+            )
         )
     )
 )
 
-SET FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%
+SET "FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%"
 
 if not exist "%FFMPEG_DIR%" (
     echo Cloning FFmpeg %FFMPEG_VERSION% ...
