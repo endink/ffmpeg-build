@@ -13,6 +13,7 @@ on:
         type: choice
         options:
         - win-x64-static-md
+        - win-x64-shared-md
         - linux-x64-static
         - android-21-ndk-r25b-static
         - android-21-ndk-r25b-shared
