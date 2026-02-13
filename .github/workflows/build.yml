@@ -99,7 +99,7 @@ jobs:
             runs-on: ubuntu-22.04
             prepare: > 
               ./setup_ndk.sh r25b
-            build: >
+            build: |
               ./build-android.sh r25b shared 21
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
@@ -107,7 +107,7 @@ jobs:
             runs-on: ubuntu-22.04
             prepare: > 
               ./setup_ndk.sh r25b
-            build: >
+            build: |
               ./build-android.sh r25b static 21
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
             
@@ -115,7 +115,7 @@ jobs:
             runs-on: ubuntu-22.04
             prepare: > 
               ./setup_ndk.sh r27d
-            build: >
+            build: |
               ./build-android.sh r27d shared 29
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
@@ -123,7 +123,7 @@ jobs:
             runs-on: ubuntu-22.04
             prepare: > 
               ./setup_ndk.sh r27d
-            build: >
+            build: |
               ./build-android.sh r27d static 29
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
@@ -160,6 +160,7 @@ jobs:
         if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }}
         run: |
           echo "ANDROID_HOME=${GITHUB_WORKSPACE}/AndroidHome" >> $GITHUB_ENV
+          echo "NDK_ROOT=${GITHUB_WORKSPACE}/AndroidHome" >> $GITHUB_ENV
           if [ ! -d "${GITHUB_WORKSPACE}/AndroidHome" ];then
             mkdir "${GITHUB_WORKSPACE}/AndroidHome"
             echo "Android Home: ${GITHUB_WORKSPACE}/AndroidHome"
@@ -176,7 +177,7 @@ jobs:
           repository: FFmpeg/FFmpeg
           submodules: true
           ref: n${{ env.TARGET_VERSION }}
-          path: ffmpeg-${{ env.TARGET_VERSION }}
+          path: ffmpeg-src/${{ env.TARGET_VERSION }}
           
       - name: Move FFmpeg (Windows)
         if: runner.os == 'Windows'
@@ -188,7 +189,7 @@ jobs:
               mkdir windows-builder\src
           )
         
-          move ffmpeg-%TARGET_VERSION% "%TARGET_DIR%"
+          move "ffmpeg-src/${{ env.TARGET_VERSION }}" "%TARGET_DIR%"
           DIR "%TARGET_DIR%"
           
       - name: Restore VS BuildTools Cache

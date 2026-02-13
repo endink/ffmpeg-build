@@ -1,79 +1,64 @@
 #!/bin/bash
-
 set -e
-set -x   # 打印每条命令，方便调试
+set -x
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
-# FFmpeg 版本
-#FFMPEG_VERSION=n6.1.4
-FFMPEG_VERSION=n4.4.6
+# ------------------------------
+# 配置 FFmpeg 版本和源码路径
+# ------------------------------
+FFMPEG_VERSION=${FFMPEG_VERSION:-4.4.6}
+FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-src/$FFMPEG_VERSION"
+
+ANDROID_HOME_DIR=${ANDROID_HOME:-/mnt/e/WSL_Data/AndroidSDK}
+
+# ------------------------------
 # NDK & Android 配置
-#NDK_VERSION=r25b
-NDK_VERSION=r27d
-ANDROID_NDK_API_LEVEL=29
-ANDROID_ABI=arm64-v8a
+# ------------------------------
+NDK_VERSION=${1:-r27d}              # 第一个参数：NDK 版本
+BUILD_TYPE=${2:-static}             # 第二个参数：static 或 shared
+API_LEVEL=${3:-29}                  # 第三个参数：默认 API 级别
 
-FFMPEG_DIR=$SCRIPT_DIR/ffmpeg-src/$FFMPEG_VERSION
-
-case "$ANDROID_ABI" in
-  arm64-v8a)
-    ARCH=aarch64
-    CPU=armv8-a
-    ;;
-  armeabi-v7a)
-    ARCH=arm
-    CPU=armv7-a
-    ;;
-  x86)
-    ARCH=x86
-    CPU=i686
-    ;;
-  x86_64)
-    ARCH=x86_64
-    CPU=x86-64
-    ;;
-esac
-
-# 如果没有源码则自动 clone
-if [ ! -d "$FFMPEG_DIR" ]; then
-    echo "Cloning FFmpeg $FFMPEG_VERSION ..."
-    git clone --depth 1 -v --progress -b $FFMPEG_VERSION https://github.com/FFmpeg/FFmpeg.git "$FFMPEG_DIR"
-fi
-
-NDK=/mnt/e/WSL_Data/AndroidSDK/ndk/android-ndk-${NDK_VERSION}
-HOST=aarch64-linux-android
-
-TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
+NDK_ROOT=${ANDROID_HOME_DIR}/ndk/android-ndk-${NDK_VERSION}
+TOOLCHAIN=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
 SYSROOT=$TOOLCHAIN/sysroot
 
-PREFIX=$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${NDK_VERSION}-android-${ANDROID_NDK_API_LEVEL}/$ANDROID_ABI
+# ------------------------------
+# 安装路径
+# ------------------------------
+INSTALL_DIR=${INSTALL_DIR:-$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${NDK_VERSION}-android-${API_LEVEL}}
 
-export CC="$TOOLCHAIN/bin/${HOST}${ANDROID_NDK_API_LEVEL}-clang"
-export CXX="$TOOLCHAIN/bin/${HOST}${ANDROID_NDK_API_LEVEL}-clang++"
-export AR="$TOOLCHAIN/bin/llvm-ar"
-export STRIP="$TOOLCHAIN/bin/llvm-strip"
-export LD="$TOOLCHAIN/bin/ld"
+# ------------------------------
+# 多 ABI 支持
+# ------------------------------
+if [ "$CI" == "true" ]; then
+    ABIS=("armeabi-v7a" "arm64-v8a")
+else
+    ABIS=("arm64-v8a")
+fi
 
-# 静态 libc++（关键）
-export CFLAGS="-fPIC -DANDROID"
-export CXXFLAGS="$CFLAGS"
-export LDFLAGS="-static-libstdc++ -fPIC"
-export EXTRA_ASFLAGS="-fPIC"
+# ------------------------------
+# 根据 BUILD_TYPE 设置 configure 标志
+# ------------------------------
+if [ "$BUILD_TYPE" == "static" ]; then
+    BUILD_FLAG="--enable-static --disable-shared"
+elif [ "$BUILD_TYPE" == "shared" ]; then
+    BUILD_FLAG="--disable-static --enable-shared"
+else
+    echo "Unknown BUILD_TYPE: $BUILD_TYPE. Must be 'static' or 'shared'."
+    exit 1
+fi
 
-# ---- 配置选项 ----
+# ------------------------------
+# FFmpeg configure 参数
+# ------------------------------
 CONFIG_ARGS=(
-  # 基础组件
   --enable-avutil
   --enable-avcodec
   --enable-avformat
   --enable-swresample
   --enable-swscale
-  # 汇编
-  #--disable-hardcoded-tables
   --enable-optimizations
-  --disable-asm
-  # 禁用不必要模块，减小体积
   --disable-programs
   --disable-doc
   --disable-debug
@@ -109,7 +94,6 @@ CONFIG_ARGS=(
   --disable-zlib
   --disable-autodetect
   --enable-demuxers
-  # 必须启用的协议和解析器
   --enable-protocol=file
   --enable-protocol=pipe
   --enable-protocol=fd
@@ -118,33 +102,67 @@ CONFIG_ARGS=(
   --enable-muxer=mp4
 )
 
-cd "$FFMPEG_DIR"
+# ------------------------------
+# 循环构建每个 ABI
+# ------------------------------
+for ANDROID_ABI in "${ABIS[@]}"; do
+    case "$ANDROID_ABI" in
+        arm64-v8a) ARCH=aarch64; CPU=armv8-a ;;
+        armeabi-v7a) ARCH=arm; CPU=armv7-a ;;
+        x86) ARCH=x86; CPU=i686 ;;
+        x86_64) ARCH=x86_64; CPU=x86-64 ;;
+    esac
 
-# 清理旧编译，确保 -fPIC 生效
-make distclean || true
-rm -rf "$PREFIX"
+    HOST=${ARCH}-linux-android
+    LIBDIR="$INSTALL_DIR/lib/$ANDROID_ABI"
 
-# 配置
-./configure \
-   --enable-cross-compile \
-  --arch=$ARCH \
-  --cpu=$CPU \
-  --target-os=android \
-  --enable-static \
-  --disable-shared \
-  --enable-pic \
-  --sysroot=$SYSROOT \
-  --cc=$CC \
-  --cxx=$CXX \
-  --prefix="$PREFIX" \
-  --extra-cflags="$CFLAGS" \
-  --extra-cxxflags="$CXXFLAGS" \
-  --extra-ldflags="$LDFLAGS" \
-  "${CONFIG_ARGS[@]}"
+    export CC="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang"
+    export CXX="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang++"
+    export AR="$TOOLCHAIN/bin/llvm-ar"
+    export STRIP="$TOOLCHAIN/bin/llvm-strip"
+    export LD="$TOOLCHAIN/bin/ld"
 
-# 编译安装
-make -j$(nproc)
-make install
+    export CFLAGS="-fPIC -DANDROID"
+    export CXXFLAGS="$CFLAGS"
+    export LDFLAGS="-static-libstdc++ -fPIC"
 
-echo "FFmpeg Android ARM64 static build finished!"
-echo "Install path: $PREFIX"
+    # 创建 ABI 目录
+    mkdir -p "$LIBDIR"
+    mkdir -p "$INSTALL_DIR/include"
+
+    cd "$FFMPEG_DIR"
+
+    # 清理旧编译
+    make distclean || true
+    rm -rf "$LIBDIR"
+
+    # 配置
+    ./configure \
+        --enable-cross-compile \
+        --arch=$ARCH \
+        --cpu=$CPU \
+        --target-os=android \
+        $BUILD_FLAG \
+        --enable-pic \
+        --sysroot=$SYSROOT \
+        --cc=$CC \
+        --cxx=$CXX \
+        --prefix="$INSTALL_DIR" \
+        --includedir="$INSTALL_DIR/include" \
+        --libdir="$LIBDIR" \
+        --extra-cflags="$CFLAGS" \
+        --extra-cxxflags="$CXXFLAGS" \
+        --extra-ldflags="$LDFLAGS" \
+        "${CONFIG_ARGS[@]}"
+
+    make -j$(nproc)
+    make install
+
+    echo "------------------------------------------"
+    echo "FFmpeg build for $ANDROID_ABI (API $API_LEVEL, $BUILD_TYPE) finished:"
+    echo "  include: $INSTALL_DIR/include"
+    echo "  lib    : $LIBDIR"
+    echo "------------------------------------------"
+done
+
+echo "All builds finished!"
