@@ -107,17 +107,16 @@ CONFIG_ARGS=(
 # ------------------------------
 for ANDROID_ABI in "${ABIS[@]}"; do
     case "$ANDROID_ABI" in
-        arm64-v8a) ARCH=aarch64; CPU=armv8-a; TOOLCHAIN_ARCH=aarch64 ;;
-        armeabi-v7a) ARCH=arm; CPU=armv7-a; TOOLCHAIN_ARCH=armv7a ;;
-        x86) ARCH=x86; CPU=i686; TOOLCHAIN_ARCH=armv7a; TOOLCHAIN_ARCH=i686 ;;
-        x86_64) ARCH=x86_64; CPU=x86-64; TOOLCHAIN_ARCH=x86_64 ;;
+        arm64-v8a) ARCH=aarch64; CPU=armv8-a; HOST=aarch64-linux-android${API_LEVEL} ;;
+        armeabi-v7a) ARCH=arm; CPU=armv7-a; HOST=armv7a-linux-androideabi${API_LEVEL} ;;
+        x86) ARCH=x86; CPU=i686; HOST=armv7a; TOOLCHAIN_ARCH=i686-linux-android${API_LEVEL} ;;
+        x86_64) ARCH=x86_64; CPU=x86-64; HOST=x86_64-linux-android${API_LEVEL} ;;
     esac
 
-    HOST=${TOOLCHAIN_ARCH}-linux-android
     LIBDIR="$INSTALL_DIR/lib/$ANDROID_ABI"
 
-    export CC="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang"
-    export CXX="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang++"
+    export CC="$TOOLCHAIN/bin/${HOST}-clang"
+    export CXX="$TOOLCHAIN/bin/${HOST}-clang++"
     export AR="$TOOLCHAIN/bin/llvm-ar"
     export STRIP="$TOOLCHAIN/bin/llvm-strip"
     export LD="$TOOLCHAIN/bin/ld"
