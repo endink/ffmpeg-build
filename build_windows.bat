@@ -245,16 +245,13 @@ SET liblzma_SLN=%SOURCE_DIR%\liblzma\SMP\liblzma.sln
 
 echo Start MSbuild ...
 
-msbuild "%libzlib_SLN%" !MSBUILD_ARGS!
-
-msbuild "%libbz2_SLN%" !MSBUILD_ARGS!
-
-msbuild "%liblzma_SLN%" !MSBUILD_ARGS!
-
+msbuild "%libzlib_SLN%" !MSBUILD_ARGS! || GOTO exit
+msbuild "%libbz2_SLN%" !MSBUILD_ARGS! || GOTO exit
+msbuild "%liblzma_SLN%" !MSBUILD_ARGS! || GOTO exit
 
 pushd "%BUILDER_DIR%"
 
-project_generate.exe --rootdir=%FFMPEG_DIR% --help
+REM project_generate.exe --rootdir=%FFMPEG_DIR% --help
 REM Run the executable
 ECHO Running project generator...
 project_generate.exe --rootdir=%FFMPEG_DIR% %PGOPTIONS%
@@ -263,7 +260,7 @@ popd
 
 @ECHO ON
 REM msbuild "%FFMEPG_SLN%" -t:rebuild %MSBUILD_ARGS%
-msbuild "%FFMEPG_SLN%" %MSBUILD_ARGS%
+msbuild "%FFMEPG_SLN%" %MSBUILD_ARGS% || GOTO exit
 @ECHO OFF
 
 if exist "%INSTALL_DIR%" (

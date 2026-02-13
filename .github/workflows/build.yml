@@ -215,6 +215,7 @@ jobs:
             --installPath C:\VS_BUILD ^
             --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ^
             --add Microsoft.Component.MSBuild ^
+            --add Microsoft.VisualStudio.Component.VC.NASM ^
             --includeRecommended
           if %ERRORLEVEL% neq 0 (
             echo ERROR: VS Build Tools installation failed
