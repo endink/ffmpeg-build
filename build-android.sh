@@ -72,8 +72,6 @@ CONFIG_ARGS=(
   --disable-encoders
   --disable-decoders
   --disable-parsers
-  --disable-muxers
-  --disable-demuxers
   --disable-pthreads
   --disable-w32threads
   --disable-os2threads
@@ -93,13 +91,12 @@ CONFIG_ARGS=(
   --disable-xlib
   --disable-zlib
   --disable-autodetect
-  --enable-demuxers
   --enable-protocol=file
   --enable-protocol=pipe
   --enable-protocol=fd
-  --enable-decoder=aac,aac_latm,mp3,flac,vorbis,opus,alac,ac3,eac3,dca,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_alaw,pcm_mulaw,h264,hevc,vp8,vp9,av1,mpeg4,mpegvideo,mjpeg,rawvideo
+  --enable-decoder=aac,aac_latm,mp3,flac,vorbis,opus,alac,ac3,eac3,dca,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_alaw,pcm_mulaw,h264,hevc,vp7,vp8,vp9,av1,mpeg4,mpegvideo,mjpeg,rawvideo
   --enable-parser=aac,aac_latm,mpegaudio,ac3,dca,h264,hevc,av1,mpeg4video,mpegvideo,vp8,vp9,mjpeg
-  --enable-muxer=mp4
+  --disable-muxers
 )
 
 # ------------------------------

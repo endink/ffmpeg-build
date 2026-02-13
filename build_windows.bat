@@ -14,10 +14,12 @@ if not "%~1"=="" set "MS_BUILD_TYPE=%~1"
 
 if not defined MS_BUILD_TYPE set "MS_BUILD_TYPE=static"
 
+set MSBUILD_CONFIG=Release
+set MSBUILD_CONFIG_TYPE=StaticLibrary
+
 if /I "%MS_BUILD_TYPE%"=="shared" (
-    set "MSBUILD_CONFIG_TYPE=DynamicLibrary"
-) else (
-    set "MSBUILD_CONFIG_TYPE=StaticLibrary"
+    set MSBUILD_CONFIG_TYPE=DynamicLibrary
+    set MSBUILD_CONFIG=ReleaseDLLStaticDeps
 )
 
 echo BUILD TYPE: %MSBUILD_CONFIG_TYPE%
@@ -91,13 +93,14 @@ vorbis, ^
 zlib ^
 )
 
+SET "STATIC_OR_SHARED=--enable-static --disable-shared"
+
+
 SET PGOPTIONS=^
 --enable-version3 ^
 --enable-zlib ^
 --enable-bzlib ^
 --enable-lzma ^
---enable-static ^
---disable-shared ^
  ^
 --disable-ffplay ^
 --disable-sdl2 ^
@@ -113,6 +116,7 @@ SET PGOPTIONS=^
 --disable-libvorbis ^
 --disable-libopus ^
 --disable-libilbc ^
+--disable-autodetect ^
  ^
 --disable-vaapi ^
 --enable-w32threads ^
@@ -149,6 +153,7 @@ SET PGOPTIONS=^
 --enable-decoder=pcm_f32le ^
 --enable-decoder=h264 ^
 --enable-decoder=hevc ^
+--enable-decoder=vp7 ^
 --enable-decoder=vp8 ^
 --enable-decoder=vp9 ^
 --enable-decoder=av1 ^
@@ -168,14 +173,14 @@ SET PGOPTIONS=^
 --enable-parser=mjpeg ^
 --enable-parser=av1 ^
  ^
---enable-demuxers ^
 --enable-hardcoded-tables ^
  ^
 --disable-protocols ^
 --enable-protocol=file ^
  ^
---disable-muxers ^
---enable-muxer=mp4
+--disable-muxers
+
+SET "PGOPTIONS=%PGOPTIONS% %STATIC_OR_SHARED%"
 
 echo %PGOPTIONS%
 
@@ -221,21 +226,30 @@ IF /I "%CI%"=="true" (
 
 ECHO Build ffmepg dependencies...
 
-set "MSBUILD_ARGS="
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:Configuration=Release"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:CLanguageStandard=Default"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:DebugSymbols=false"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:DebugType=None"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:Platform=x64"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:VCToolsVersion=%VC_VERSION%"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
+set "MSBUILD_COMMONS_ARGS=%SHARED_MSBUILD_ARGS%"
+set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:CLanguageStandard=Default"
+set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:DebugSymbols=false"
+set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:DebugType=None"
+set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:Platform=x64"
+set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:VCToolsVersion=%VC_VERSION%"
+set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
 
 echo.
-echo MSBUILD ARGS: !MSBUILD_ARGS!
+echo MSBUILD ARGS: !MSBUILD_COMMONS_ARGS!
 echo.
 
+set "DEPS_BUILD_ARGS=!MSBUILD_COMMONS_ARGS! /p:Configuration=Release /p:ConfigurationType=StaticLibrary"
 
-REM project_generate.exe --rootdir=%FFMPEG_DIR% --help
+set "FFMPEG_BUILD_ARGS=!MSBUILD_COMMONS_ARGS! /p:ConfigurationType=%MSBUILD_CONFIG_TYPE% /p:Configuration=%MSBUILD_CONFIG%"
+
+
+echo.
+echo DEPS ARGS: !DEPS_BUILD_ARGS!
+echo.
+
+echo Build Dependencies ...
+
+project_generate.exe --rootdir=%FFMPEG_DIR% --help
 REM project_generate.exe --rootdir=%FFMPEG_DIR% --list-decoders 
 SET FFMEPG_SLN=%FFMPEG_DIR%\SMP\ffmpeg.sln
 SET libzlib_SLN=%SOURCE_DIR%\zlib\SMP\libzlib.sln
@@ -244,9 +258,9 @@ SET liblzma_SLN=%SOURCE_DIR%\liblzma\SMP\liblzma.sln
 
 echo Start MSbuild ...
 
-msbuild "%libzlib_SLN%" !MSBUILD_ARGS! /p:ConfigurationType=StaticLibrary || GOTO exit
-msbuild "%libbz2_SLN%" !MSBUILD_ARGS! /p:ConfigurationType=StaticLibrary || GOTO exit
-msbuild "%liblzma_SLN%" !MSBUILD_ARGS! /p:ConfigurationType=StaticLibrary || GOTO exit
+msbuild "%libzlib_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
+msbuild "%libbz2_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
+msbuild "%liblzma_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
 
 pushd "%BUILDER_DIR%"
 
@@ -259,7 +273,7 @@ popd
 
 @ECHO ON
 REM msbuild "%FFMEPG_SLN%" -t:rebuild %MSBUILD_ARGS%
-msbuild "%FFMEPG_SLN%" %MSBUILD_ARGS% /p:ConfigurationType=%MSBUILD_CONFIG_TYPE% || GOTO exit
+msbuild "%FFMEPG_SLN%" !FFMPEG_BUILD_ARGS! || GOTO exit
 @ECHO OFF
 
 if exist "%INSTALL_DIR%" (
