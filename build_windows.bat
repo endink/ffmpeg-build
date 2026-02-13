@@ -28,17 +28,7 @@ SET SCRIPT_DIR=%CD%
 
 SET "BUILDER_DIR=%SCRIPT_DIR%\windows-builder"
 SET "SOURCE_DIR=%BUILDER_DIR%\src"
-SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
-
-
-if /I "%CI%"=="true" (
-    if defined OUTPUT_DIR set "INSTALL_DIR=%OUTPUT_DIR:/=\%"
-    
-    
-    echo Running inside CI environment
-    echo Output Dir: %INSTALL_DIR%
-    echo.
-)
+if not defined INSTALL_DIR SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
 
 
 SET "FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%"
