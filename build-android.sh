@@ -150,7 +150,7 @@ for ANDROID_ABI in "${ABIS[@]}"; do
 
     export CFLAGS="$CFLAGS -fPIC -DANDROID"
     export CXXFLAGS="$CXXFLAGS -fPIC -DANDROID"
-    export LDFLAGS="$LDFLAGS -static-libstdc++ -fPIC -Wl,--gc-sections"
+    export LDFLAGS="$LDFLAGS -static-libstdc++ -fPIC -Wl"
 
     # 创建 ABI 目录
     mkdir -p "$LIBDIR"
