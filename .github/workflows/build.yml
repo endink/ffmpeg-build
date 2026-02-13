@@ -89,7 +89,7 @@ jobs:
             build: |
               call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64
               set "FFMPEG_VERSION=%TARGET_VERSION%"
-              set "INSTALL_DIR=%OUTPUT_DIR%"
+              set "INSTALL_DIR=%OUTPUT_DIR:/=\%"
               echo Start Building (%FFMPEG_VERSION%) ...
               call "%GITHUB_WORKSPACE%\build_windows.bat" static
               tree "%OUTPUT_DIR%" /F
