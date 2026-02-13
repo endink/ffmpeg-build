@@ -17,9 +17,9 @@ if not exist "%VSNASM_DIR%" (
     )
 )
 
-MSVC_VER=17
+SET MSVC_VER=17
 REM 64/32
-SYSARCH=64
+SET SYSARCH=64
 
 
 REM Defined script variables
