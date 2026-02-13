@@ -148,9 +148,16 @@ for ANDROID_ABI in "${ABIS[@]}"; do
     # export LD="$TOOLCHAIN/bin/ld"
     export LD="$CC"
 
-    export CFLAGS="$CFLAGS -fPIC -DANDROID"
-    export CXXFLAGS="$CXXFLAGS -fPIC -DANDROID"
-    export LDFLAGS="$LDFLAGS -static-libstdc++ -fPIC -Wl"
+    CFLAGS="-fPIC -DANDROID -ffunction-sections -fdata-sections"
+    if [ "$BUILD_TYPE" == "shared" ]; then
+        CFLAGS="$CFLAGS -Os"
+    fi
+    CXXFLAGS="$CFLAGS"
+    
+    LDFLAGS="-static-libstdc++ -fPIC"
+    if [ "$BUILD_TYPE" == "shared" ]; then
+        LDFLAGS="$LDFLAGS -Wl,--gc-sections"
+    fi
 
     # 创建 ABI 目录
     mkdir -p "$LIBDIR"
