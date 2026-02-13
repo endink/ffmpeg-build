@@ -116,7 +116,6 @@ SET PGOPTIONS=^
 --disable-libvorbis ^
 --disable-libopus ^
 --disable-libilbc ^
---disable-autodetect ^
  ^
 --disable-vaapi ^
 --enable-w32threads ^
@@ -177,6 +176,7 @@ SET PGOPTIONS=^
  ^
 --disable-protocols ^
 --enable-protocol=file ^
+--toolchain=msvc ^
  ^
 --disable-muxers
 
