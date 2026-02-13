@@ -239,8 +239,12 @@ jobs:
             echo ERROR: MSBuild not available
             exit /b %ERRORLEVEL%
           )
+          
+          call install_nasm.bat
+          
           where msbuild
           where cl
+          
           echo VS environment ready
           
 
