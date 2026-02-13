@@ -179,7 +179,7 @@ jobs:
           path: ffmpeg-src/${{ env.TARGET_VERSION }}
           
       - name: Move FFmpeg (Windows)
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
         shell: cmd
         run: |
           set "TARGET_DIR=windows-builder\src\ffmpeg-%TARGET_VERSION%"
