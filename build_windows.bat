@@ -236,6 +236,11 @@ set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:Platform=x64"
 set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:VCToolsVersion=%VC_VERSION%"
 set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
 
+if /I NOT "%CI%"=="true" (
+    set "MSBUILD_COMMONS_ARGS=%MSBUILD_COMMONS_ARGS% /v:q"
+)
+
+
 echo.
 echo MSBUILD ARGS: !MSBUILD_COMMONS_ARGS!
 echo.
@@ -266,7 +271,7 @@ msbuild "%liblzma_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
 
 pushd "%BUILDER_DIR%"
 
-IF /I "%CI%"=="true" (
+if /I NOT "%CI%"=="true" (
   project_generate.exe --rootdir=%FFMPEG_DIR% --help
 )
 
