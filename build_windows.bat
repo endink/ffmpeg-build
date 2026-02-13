@@ -14,15 +14,17 @@ if not "%~1"=="" set "MS_BUILD_TYPE=%~1"
 
 if not defined MS_BUILD_TYPE set "MS_BUILD_TYPE=static"
 
-set MSBUILD_CONFIG=Release
-set MSBUILD_CONFIG_TYPE=StaticLibrary
 
 if /I "%MS_BUILD_TYPE%"=="shared" (
     set MSBUILD_CONFIG_TYPE=DynamicLibrary
     set MSBUILD_CONFIG=ReleaseDLLStaticDeps
+) else (
+    set MSBUILD_CONFIG=Release
+    set MSBUILD_CONFIG_TYPE=StaticLibrary
 )
 
 echo BUILD TYPE: %MSBUILD_CONFIG_TYPE%
+echo MSBUILD CONFIG: %MSBUILD_CONFIG%
 
 
 pushd %~dp0
