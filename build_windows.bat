@@ -1,44 +1,69 @@
 @ECHO OFF
 
-REM SET FFMPEG_VERSION=n4.4.6
-SET FFMPEG_VERSION=n7.1.3
+REM SET FFMPEG_VERSION=4.4.6
+
+REM ==== Specify MSVC and Windows SDK versions ====
+set "VS_PATH=C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+
+if not defined VC_VERSION set "VC_VERSION=14.38.33130"
+if not defined WIN_SDK_VERSION set "WIN_SDK_VERSION=10.0.22621.0"
+if not defined FFMPEG_VERSION set "FFMPEG_VERSION=7.1.3"
+
+if not "%~1"=="" set "MS_BUILD_TYPE=%~1"
+
+if not defined MS_BUILD_TYPE set "MS_BUILD_TYPE=static"
+
+if /I "%MS_BUILD_TYPE%"=="shared" (
+    set "MSBUILD_CONFIG_TYPE=DynamicLibrary"
+) else (
+    set "MSBUILD_CONFIG_TYPE=StaticLibrary"
+)
+
+echo BUILD TYPE: %MSBUILD_CONFIG_TYPE%
+
 
 pushd %~dp0
 
 SET SCRIPT_DIR=%CD%
 
-SET BUILDER_DIR=%SCRIPT_DIR%\windows-builder
-SET SOURCE_DIR=%BUILDER_DIR%\src
+SET "BUILDER_DIR=%SCRIPT_DIR%\windows-builder"
+SET "SOURCE_DIR=%BUILDER_DIR%\src"
 SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
 
 
+if /I "%IS_CI%"=="true" (
+    if defined OUTPUT_DIR set "INSTALL_DIR=%OUTPUT_DIR%"
+    
+    
+    echo Running inside CI environment
+    echo Output Dir: %OUTPUT_DIR%
+    echo.
+)
 
-SET FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%
+if not defined FFMPEG_DIR SET FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%
 
 if not exist "%FFMPEG_DIR%" (
     echo Cloning FFmpeg %FFMPEG_VERSION% ...
-    git clone --depth 1 -v --progress -b %FFMPEG_VERSION% https://github.com/FFmpeg/FFmpeg.git "%FFMPEG_DIR%"
+    git clone --depth 1 -v --progress -b n%FFMPEG_VERSION% https://github.com/FFmpeg/FFmpeg.git "%FFMPEG_DIR%"
     if errorlevel 1 (
         echo Clone failed, exiting.
         exit /b 1
     )
 )
 
-REM ==== Specify MSVC and Windows SDK versions ====
-set "VS_PATH=C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-set "VC_VERSION=14.38.33130"
-set "WIN_SDK_VERSION=10.0.22621.0"
 
-echo Initializing MSVC environment...
-call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"  x86_amd64 %WIN_SDK_VERSION% -vcvars_ver=%VC_VERSION%
-if errorlevel 1 (
-    echo MSVC environment initialization failed.
-    exit /b 1
+if /I NOT "%IS_CI%"=="true" (
+
+    echo Initializing MSVC environment...
+    call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"  x86_amd64 %WIN_SDK_VERSION% -vcvars_ver=%VC_VERSION%
+    if errorlevel 1 (
+        echo MSVC environment initialization failed.
+        exit /b 1
+    )
+
+    where cl
+
 )
-
-where cl
-
-pause
 
 
 SET UPSTREAMURL=https://github.com/ShiftMediaProject
@@ -182,21 +207,38 @@ REM Copy across the batch file used to auto get required dependencies
 CALL :makeGetDeps || GOTO exit
 
 REM Get/Update any used dependency libraries
-SET USERPROMPT=N
-SET /P USERPROMPT=Do you want to download/update the required dependency projects (Y/N)?
-IF /I "%USERPROMPT%"=="Y" (
+
+IF /I "%GITHUB_ACTIONS%"=="true" (
+    ECHO CI detected - auto updating dependencies
     ECHO.
     CALL :getDeps || GOTO exit
-    ECHO Ensure that any dependency projects have been built using the supplied project within the dependencies ./SMP folder before continuing.
-    ECHO Warning: Some used dependencies require a manual download. Consult the readme for instructions to install the following needed components:
-    ECHO    OpenGL
-    PAUSE
+) ELSE (
+    SET USERPROMPT=N
+    SET /P USERPROMPT=Do you want to download/update the required dependency projects (Y/N)?
+    IF /I "%USERPROMPT%"=="Y" (
+        ECHO.
+        CALL :getDeps || GOTO exit
+        ECHO Ensure that any dependency projects have been built using the supplied project within the dependencies ./SMP folder before continuing.
+        ECHO Warning: Some used dependencies require a manual download. Consult the readme for instructions to install the following needed components:
+        ECHO    OpenGL
+        PAUSE
+    )
 )
 
 
 ECHO Build ffmepg dependencies...
 
-SET "MSBUILD_ARGS=/p:Configuration=Release /p:ConfigurationType=StaticLibrary /p:CLanguageStandard=Default /p:DebugSymbols=false /p:DebugType=None /p:Platform=x64  /p:VCToolsVersion=%VC_VERSION%"
+set "MSBUILD_ARGS=^
+/p:Configuration=Release ^
+/p:ConfigurationType=%MSBUILD_CONFIG_TYPE% ^
+/p:CLanguageStandard=Default ^
+/p:DebugSymbols=false ^
+/p:DebugType=None ^
+/p:Platform=x64 ^
+/p:VCToolsVersion=%VC_VERSION% ^
+/p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
+
+
 REM project_generate.exe --rootdir=%FFMPEG_DIR% --help
 REM project_generate.exe --rootdir=%FFMPEG_DIR% --list-decoders 
 SET FFMEPG_SLN=%FFMPEG_DIR%\SMP\ffmpeg.sln

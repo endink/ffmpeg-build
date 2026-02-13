@@ -1,0 +1,291 @@
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target-version:
+        description: "FFmpeg Version"
+        type: string
+        default: 4.4.6
+      target:
+        description: "Build Target"
+        default: all
+        type: choice
+        options:
+        - win-x64-static-md
+        - linux-x64-static
+        - android-21-ndk-r25b-static
+        - android-21-ndk-r25b-shared
+        - android-29-ndk-r27d-static
+        - android-29-ndk-r27d-shared
+        - all
+      release:
+        description: "Modify Release"
+        default: "No"
+        type: choice
+        options:
+        - "Yes"
+        - "No"
+      
+  push:
+    tags:
+      - v*.*.*
+
+env:
+  PROJ_NAME: FFmpeg
+  GCC_VERSION: 11
+  CMAKE_VERSION: 3.26
+  PYTHON_VERSION: 3.9
+  NODE_VERSION: 20
+  XCODE_VERSION: 14.2
+  MACOSX_DEPLOYMENT_TARGET: 10.15
+  BUILD_TARGET: ${{ inputs.target || 'all' }}
+  WIN_SDK_VERSION: 10.0.22621.0
+  IS_RELEASE: ${{ inputs.release || 'Yes' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - target: linux-aarch64-static_lib
+          #   runs-on: buildjet-4vcpu-ubuntu-2204-arm
+          #   build: >
+          #     PARALLEL_JOB_COUNT=2
+          #     ./build-static_lib.sh
+          #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          - target: linux-x64-static
+            runs-on: ubuntu-22.04
+            build: ./build-static_lib.sh
+            post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          # - target: osx-arm64-static_lib
+          #   runs-on: macos-13-xlarge
+          #   build: ./build-static_lib.sh
+          #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          # - target: osx-universal2-static_lib
+          #   runs-on: macos-13-xlarge
+          #   build: >
+          #     CMAKE_OPTIONS="-D CMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+          #     ./build-static_lib.sh
+          #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          # - target: osx-x86_64-static_lib
+          #   runs-on: macos-13
+          #   build: ./build-static_lib.sh
+          #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          - target: win-x64-static-md
+            runs-on: windows-2022
+            build: |
+              call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64
+              set "FFMPEG_VERSION=%TARGET_VERSION%"
+              set "FFMPEG_DIR=%GITHUB_WORKSPACE%\ffmpeg"
+              echo Start Building ...
+              call "%GITHUB_WORKSPACE%\build_windows.bat" static
+              tree "$OUTPUT_DIR" /F
+            post-build: 7z a $ARCHIVE_DIR/$ARCHIVE_NAME.zip $OUTPUT_DIR/*
+
+          - target: android-21-ndk-r25b-shared
+            runs-on: ubuntu-22.04
+            prepare: > 
+              ./setup_ndk.sh r25b
+            build: >
+              ./build-android.sh r25b shared 21
+            post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          - target: android-21-ndk-r25b-static
+            runs-on: ubuntu-22.04
+            prepare: > 
+              ./setup_ndk.sh r25b
+            build: >
+              ./build-android.sh r25b static 21
+            post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+            
+          - target: android-29-ndk-r27d-shared
+            runs-on: ubuntu-22.04
+            prepare: > 
+              ./setup_ndk.sh r27d
+            build: >
+              ./build-android.sh r27d shared 29
+            post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          - target: android-29-ndk-r27d-static
+            runs-on: ubuntu-22.04
+            prepare: > 
+              ./setup_ndk.sh r27d
+            build: >
+              ./build-android.sh r27d static 29
+            post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+          # - target: wasm-static_lib-simd-threaded
+          #   runs-on: ubuntu-22.04
+          #   build: ./build-wasm-static_lib.sh
+          #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+
+    steps:
+      - name: Evaluate build enable
+        id: eval
+        run: echo "enabled=${{ env.BUILD_TARGET == 'all' || env.BUILD_TARGET == matrix.target }}" >> $GITHUB_OUTPUT
+        
+      - name: Set ${{ env.PROJ_NAME }} version
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "TARGET_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+            echo "Use ${{ env.PROJ_NAME }} Version: ${GITHUB_REF_NAME#v}"
+          else
+            echo "TARGET_VERSION=${{ inputs.target-version }}" >> $GITHUB_ENV
+            echo "Use ${{ env.PROJ_NAME }} Version: ${{ inputs.target-version }}"
+          fi
+      
+      - name: Set environment variables
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        run: |
+          echo OUTPUT_DIR=${GITHUB_WORKSPACE}/output >> $GITHUB_ENV
+          echo ARCHIVE_DIR="${{ runner.temp }}" >> $GITHUB_ENV
+          echo ARCHIVE_NAME=${{ env.PROJ_NAME }}-${{ matrix.target }}-${{ env.TARGET_VERSION }} >> $GITHUB_ENV
+          echo Use Ouput Dir: ${GITHUB_WORKSPACE}/output
+       
+      - name: Setup Android environment
+        if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }}
+        run: |
+          echo "ANDROID_HOME=${GITHUB_WORKSPACE}/AndroidHome" >> $GITHUB_ENV
+          if [ ! -d "${GITHUB_WORKSPACE}/AndroidHome" ];then
+            mkdir "${GITHUB_WORKSPACE}/AndroidHome"
+            echo "Android Home: ${GITHUB_WORKSPACE}/AndroidHome"
+          fi
+
+      - name: Checkout
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        uses: actions/checkout@v4
+       
+      # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
+      - name: Install VS 17.8.6 Build Tools
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
+        shell: cmd
+        run: |
+          echo Downloading VS Build Tools...
+          curl -L -o vs_buildtools.exe ^
+            https://download.visualstudio.microsoft.com/download/pr/5bebe58c-9308-4a5b-9696-b6f84e90a32e/b10fa177f8134e8f9f5655270357e360196c546dc83c6627d8577b2ad6760dec/vs_BuildTools.exe || exit /b 1
+          
+          echo Installing VS Build Tools...
+          start /wait vs_buildtools.exe ^
+            --quiet --wait --norestart --nocache ^
+            --installPath C:\VS_BUILD ^
+            --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ^
+            --add Microsoft.Component.MSBuild ^
+            --includeRecommended ^
+            || (echo ERROR: VS Build Tools installation failed & exit /b 1)
+          
+          call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64 ^
+          || (echo ERROR: Failed to initialize VS environment & exit /b 1)
+          
+          cl >nul 2>nul || (echo ERROR: cl compiler not available & exit /b 1)
+
+          msbuild -version >nul 2>nul || (echo ERROR: MSBuild not available & exit /b 1)
+
+          echo VS environment ready
+          
+      - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: FFmpeg/FFmpeg
+          submodules: true
+          ref: n${{ env.TARGET_VERSION }}
+          path: ffmpeg
+          
+
+      - name: Setup GCC
+        if: ${{ startsWith(matrix.target, 'linux') && steps.eval.outputs.enabled == 'true' }}
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: ${{ env.GCC_VERSION }}
+
+      - name: Setup CMake
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+
+      - name: Setup Xcode
+        if: ${{ runner.os == 'macOS' && steps.eval.outputs.enabled == 'true' }}
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Setup Android NDK
+        if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }} 
+        run: ${{ matrix.prepare }}
+        
+      - name: Build (Windows)
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
+        shell: cmd
+        run: ${{ matrix.build }}
+      
+      - name: Build (Linux)
+        if: ${{ runner.os != 'Windows' && steps.eval.outputs.enabled == 'true' }}
+        shell: bash
+        run: ${{ matrix.build }}
+        
+      - name: Post build
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        run: ${{ matrix.post-build }}
+
+      - name: Upload artifact
+        if: ${{ steps.eval.outputs.enabled == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          compression-level: 9
+          retention-days: 1
+          name: ${{ env.ARCHIVE_NAME }}
+          path: ${{ env.ARCHIVE_DIR }}/${{ env.ARCHIVE_NAME }}.*
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Set ${{ env.PROJ_NAME } version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "TARGET_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+            echo "Use ${{ env.PROJ_NAME }} Version: ${GITHUB_REF_NAME#v}"
+          else
+            echo "TARGET_VERSION=${{ inputs.target-version }}" >> $GITHUB_ENV
+            echo "Use ${{ env.PROJ_NAME } Version: ${{ inputs.target-version }}"
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/artifact
+
+      - name: Display structure of downloaded files
+        run: ls -R /tmp/artifact
+        
+      - name: Release
+        if: ${{ env.IS_RELEASE == 'Yes' }}
+        uses: ncipollo/release-action@v1
+        with:
+          omitName: true
+          body: "Official Release: [${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}](https://github.com/FFmpeg/FFmpeg/releases/tag/n${{ env.TARGET_VERSION  }})"
+          artifacts: "/tmp/artifact/*/*.tgz,/tmp/artifact/*/*.zip"
+          tag: "v${{ env.TARGET_VERSION }}"
+          allowUpdates: true
+          omitNameDuringUpdate: true
+          omitBodyDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          omitDraftDuringUpdate: false
+          

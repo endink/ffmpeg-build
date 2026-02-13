@@ -11,9 +11,29 @@ FFMPEG_VERSION=n4.4.6
 # NDK & Android 配置
 #NDK_VERSION=r25b
 NDK_VERSION=r27d
-ANDROID_NDK_API_LEVEL=21
+ANDROID_NDK_API_LEVEL=29
+ANDROID_ABI=arm64-v8a
 
 FFMPEG_DIR=$SCRIPT_DIR/ffmpeg-src/$FFMPEG_VERSION
+
+case "$ANDROID_ABI" in
+  arm64-v8a)
+    ARCH=aarch64
+    CPU=armv8-a
+    ;;
+  armeabi-v7a)
+    ARCH=arm
+    CPU=armv7-a
+    ;;
+  x86)
+    ARCH=x86
+    CPU=i686
+    ;;
+  x86_64)
+    ARCH=x86_64
+    CPU=x86-64
+    ;;
+esac
 
 # 如果没有源码则自动 clone
 if [ ! -d "$FFMPEG_DIR" ]; then
@@ -22,14 +42,12 @@ if [ ! -d "$FFMPEG_DIR" ]; then
 fi
 
 NDK=/mnt/e/WSL_Data/AndroidSDK/ndk/android-ndk-${NDK_VERSION}
-ARCH=arm64
-CPU=armv8-a
 HOST=aarch64-linux-android
 
 TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
 SYSROOT=$TOOLCHAIN/sysroot
 
-PREFIX=$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${NDK_VERSION}/$CPU
+PREFIX=$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${NDK_VERSION}-android-${ANDROID_NDK_API_LEVEL}/$ANDROID_ABI
 
 export CC="$TOOLCHAIN/bin/${HOST}${ANDROID_NDK_API_LEVEL}-clang"
 export CXX="$TOOLCHAIN/bin/${HOST}${ANDROID_NDK_API_LEVEL}-clang++"
