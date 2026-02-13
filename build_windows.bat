@@ -251,7 +251,7 @@ echo.
 
 echo Build Dependencies ...
 
-project_generate.exe --rootdir=%FFMPEG_DIR% --help
+REM project_generate.exe --rootdir=%FFMPEG_DIR% --help
 REM project_generate.exe --rootdir=%FFMPEG_DIR% --list-decoders 
 SET FFMEPG_SLN=%FFMPEG_DIR%\SMP\ffmpeg.sln
 SET libzlib_SLN=%SOURCE_DIR%\zlib\SMP\libzlib.sln
@@ -266,10 +266,14 @@ msbuild "%liblzma_SLN%" !DEPS_BUILD_ARGS! || GOTO exit
 
 pushd "%BUILDER_DIR%"
 
+IF /I "%CI%"=="true" (
+  project_generate.exe --rootdir=%FFMPEG_DIR% --help
+)
+
 REM project_generate.exe --rootdir=%FFMPEG_DIR% --help
 REM Run the executable
 ECHO Running project generator...
-project_generate.exe --rootdir=%FFMPEG_DIR% %PGOPTIONS%
+project_generate.exe --rootdir=%FFMPEG_DIR% %PGOPTIONS% || GOTO exit
 
 popd
 
