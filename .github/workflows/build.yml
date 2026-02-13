@@ -176,24 +176,39 @@ jobs:
         run: |
           echo Downloading VS Build Tools...
           curl -L -o vs_buildtools.exe ^
-            https://download.visualstudio.microsoft.com/download/pr/5bebe58c-9308-4a5b-9696-b6f84e90a32e/b10fa177f8134e8f9f5655270357e360196c546dc83c6627d8577b2ad6760dec/vs_BuildTools.exe || exit /b 1
-          
+            https://download.visualstudio.microsoft.com/download/pr/5bebe58c-9308-4a5b-9696-b6f84e90a32e/b10fa177f8134e8f9f5655270357e360196c546dc83c6627d8577b2ad6760dec/vs_BuildTools.exe
+          if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+        
           echo Installing VS Build Tools...
           start /wait vs_buildtools.exe ^
             --quiet --wait --norestart --nocache ^
             --installPath C:\VS_BUILD ^
             --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ^
             --add Microsoft.Component.MSBuild ^
-            --includeRecommended ^
-            || (echo ERROR: VS Build Tools installation failed & exit /b 1)
-          
-          call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64 ^
-          || (echo ERROR: Failed to initialize VS environment & exit /b 1)
-          
-          cl >nul 2>nul || (echo ERROR: cl compiler not available & exit /b 1)
-
-          msbuild -version >nul 2>nul || (echo ERROR: MSBuild not available & exit /b 1)
-
+            --includeRecommended
+          if %ERRORLEVEL% neq 0 (
+            echo ERROR: VS Build Tools installation failed
+            exit /b %ERRORLEVEL%
+          )
+        
+          call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64
+          if %ERRORLEVEL% neq 0 (
+            echo ERROR: Failed to initialize VS environment
+            exit /b %ERRORLEVEL%
+          )
+        
+          cl >nul 2>nul
+          if %ERRORLEVEL% neq 0 (
+            echo ERROR: cl compiler not available
+            exit /b %ERRORLEVEL%
+          )
+        
+          msbuild -version >nul 2>nul
+          if %ERRORLEVEL% neq 0 (
+            echo ERROR: MSBuild not available
+            exit /b %ERRORLEVEL%
+          )
+        
           echo VS environment ready
           
       - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
