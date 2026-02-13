@@ -141,8 +141,8 @@ for ANDROID_ABI in "${ABIS[@]}"; do
 
     LIBDIR="$INSTALL_DIR/lib/$ANDROID_ABI"
 
-    export CC="$TOOLCHAIN/bin/${HOST}-clang"
-    export CXX="$TOOLCHAIN/bin/${HOST}-clang++"
+    export CC="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang"
+    export CXX="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang++"
     export AR="$TOOLCHAIN/bin/llvm-ar"
     export STRIP="$TOOLCHAIN/bin/llvm-strip"
     export LD="$TOOLCHAIN/bin/ld"
