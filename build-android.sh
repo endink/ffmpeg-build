@@ -107,10 +107,36 @@ CONFIG_ARGS=(
 # ------------------------------
 for ANDROID_ABI in "${ABIS[@]}"; do
     case "$ANDROID_ABI" in
-        arm64-v8a) ARCH=aarch64; CPU=armv8-a; HOST=aarch64-linux-android${API_LEVEL} ;;
-        armeabi-v7a) ARCH=arm; CPU=armv7-a; HOST=armv7a-linux-androideabi${API_LEVEL} ;;
-        x86) ARCH=x86; CPU=i686; HOST=armv7a; TOOLCHAIN_ARCH=i686-linux-android${API_LEVEL} ;;
-        x86_64) ARCH=x86_64; CPU=x86-64; HOST=x86_64-linux-android${API_LEVEL} ;;
+
+        arm64-v8a)
+            ARCH=aarch64
+            CPU=armv8-a
+            HOST=aarch64-linux-android
+            ;;
+
+        armeabi-v7a)
+            ARCH=arm
+            CPU=armv7-a
+            HOST=armv7a-linux-androideabi
+            ;;
+
+        x86)
+            ARCH=x86
+            CPU=i686
+            HOST=i686-linux-android
+            ;;
+
+        x86_64)
+            ARCH=x86_64
+            CPU=x86-64
+            HOST=x86_64-linux-android
+            ;;
+
+        *)
+            echo "Unsupported ABI: $ANDROID_ABI"
+            exit 1
+            ;;
+
     esac
 
     LIBDIR="$INSTALL_DIR/lib/$ANDROID_ABI"
@@ -121,9 +147,9 @@ for ANDROID_ABI in "${ABIS[@]}"; do
     export STRIP="$TOOLCHAIN/bin/llvm-strip"
     export LD="$TOOLCHAIN/bin/ld"
 
-    export CFLAGS="-fPIC -DANDROID"
-    export CXXFLAGS="$CFLAGS"
-    export LDFLAGS="-static-libstdc++ -fPIC"
+    export CFLAGS="$CFLAGS -fPIC -DANDROID"
+    export CXXFLAGS="$CXXFLAGS -fPIC -DANDROID"
+    export LDFLAGS="$LDFLAGS -static-libstdc++ -fPIC"
 
     # 创建 ABI 目录
     mkdir -p "$LIBDIR"

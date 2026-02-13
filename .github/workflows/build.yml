@@ -151,7 +151,7 @@ jobs:
         run: |
           echo OUTPUT_DIR=${GITHUB_WORKSPACE}/output >> $GITHUB_ENV
           echo ARCHIVE_DIR="${{ runner.temp }}" >> $GITHUB_ENV
-          echo ARCHIVE_NAME=${{ env.PROJ_NAME }}-${{ matrix.target }}-${{ env.TARGET_VERSION }} >> $GITHUB_ENV
+          echo ARCHIVE_NAME=${{ env.PROJ_NAME }}-v${{ env.TARGET_VERSION }}-${{ matrix.target }} >> $GITHUB_ENV
           echo Use Ouput Dir: ${GITHUB_WORKSPACE}/output
           
       - name: Set Windows variables
