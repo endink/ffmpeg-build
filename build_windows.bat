@@ -4,6 +4,7 @@ REM SET FFMPEG_VERSION=4.4.6
 
 REM ==== Specify MSVC and Windows SDK versions ====
 set "VS_PATH=C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+SET CURRDIR=%CD%
 
 if not defined VC_VERSION set "VC_VERSION=14.38.33130"
 if not defined WIN_SDK_VERSION set "WIN_SDK_VERSION=10.0.22621.0"
@@ -53,8 +54,9 @@ if /I NOT "%CI%"=="true" (
         echo MSVC environment initialization failed.
         exit /b 1
     )
-
+    echo.
     where cl
+    echo.
 
 )
 
@@ -178,7 +180,6 @@ SET PGOPTIONS=^
 echo %PGOPTIONS%
 
 REM Store current directory and ensure working directory is the location of current .bat
-SET CURRDIR=%CD%
 cd %~dp0
 
 REM Initialise error check value
@@ -194,7 +195,6 @@ IF NOT EXIST "%BUILDER_DIR%\project_generate.exe" (
 )
 
 REM Check if FFmpeg directory can be located
-SET FFMPEGPATH=%FFMPEG_DIR%
 
 REM Copy across the batch file used to auto get required dependencies
 CALL :makeGetDeps || GOTO exit
@@ -221,15 +221,19 @@ IF /I "%CI%"=="true" (
 
 ECHO Build ffmepg dependencies...
 
-set "MSBUILD_ARGS=^
-/p:Configuration=Release ^
-/p:ConfigurationType=%MSBUILD_CONFIG_TYPE% ^
-/p:CLanguageStandard=Default ^
-/p:DebugSymbols=false ^
-/p:DebugType=None ^
-/p:Platform=x64 ^
-/p:VCToolsVersion=%VC_VERSION% ^
-/p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
+set "MSBUILD_ARGS="
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:Configuration=Release"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:ConfigurationType=%MSBUILD_CONFIG_TYPE%"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:CLanguageStandard=Default"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:DebugSymbols=false"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:DebugType=None"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:Platform=x64"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:VCToolsVersion=%VC_VERSION%"
+set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:WindowsTargetPlatformVersion=%WIN_SDK_VERSION%"
+
+echo.
+echo MSBUILD ARGS: !MSBUILD_ARGS!
+echo.
 
 
 REM project_generate.exe --rootdir=%FFMPEG_DIR% --help
@@ -241,9 +245,12 @@ SET liblzma_SLN=%SOURCE_DIR%\liblzma\SMP\liblzma.sln
 
 echo Start MSbuild ...
 
-msbuild "%libzlib_SLN%" %MSBUILD_ARGS%
-msbuild "%libbz2_SLN%" %MSBUILD_ARGS%
-msbuild "%liblzma_SLN%" %MSBUILD_ARGS%
+msbuild "%libzlib_SLN%" !MSBUILD_ARGS!
+
+msbuild "%libbz2_SLN%" !MSBUILD_ARGS!
+
+msbuild "%liblzma_SLN%" !MSBUILD_ARGS!
+
 
 pushd "%BUILDER_DIR%"
 
@@ -280,7 +287,7 @@ GOTO exit
 :makeGetDeps
 ECHO Creating project_get_dependencies.bat...
 FOR %%I IN %DEPENDENCIES% DO SET LASTDEP=%%I
-MKDIR "%FFMPEGPATH%/SMP" >NUL 2>&1
+MKDIR "%FFMPEG_DIR%/SMP" >NUL 2>&1
 (
     ECHO @ECHO OFF
     ECHO SETLOCAL EnableDelayedExpansion
@@ -295,14 +302,14 @@ MKDIR "%FFMPEGPATH%/SMP" >NUL 2>&1
         )
     )
     type "%BUILDER_DIR%\smp_project_get_dependencies"
-) > "%FFMPEGPATH%/SMP/project_get_dependencies.bat"
+) > "%FFMPEG_DIR%/SMP/project_get_dependencies.bat"
 ECHO.
 EXIT /B %ERRORLEVEL%
 
 :getDeps
 REM Add current repo to list of already passed dependencies
 ECHO Getting and updating any required dependency libs...
-cd "%FFMPEGPATH%/SMP"
+cd "%FFMPEG_DIR%/SMP"
 CALL project_get_dependencies.bat "ffmpeg" || EXIT /B 1
 cd %~dp0
 ECHO.
