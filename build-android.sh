@@ -107,13 +107,13 @@ CONFIG_ARGS=(
 # ------------------------------
 for ANDROID_ABI in "${ABIS[@]}"; do
     case "$ANDROID_ABI" in
-        arm64-v8a) ARCH=aarch64; CPU=armv8-a ;;
-        armeabi-v7a) ARCH=arm; CPU=armv7-a ;;
-        x86) ARCH=x86; CPU=i686 ;;
-        x86_64) ARCH=x86_64; CPU=x86-64 ;;
+        arm64-v8a) ARCH=aarch64; CPU=armv8-a; TOOLCHAIN_ARCH=aarch64 ;;
+        armeabi-v7a) ARCH=arm; CPU=armv7-a; TOOLCHAIN_ARCH=armv7a ;;
+        x86) ARCH=x86; CPU=i686; TOOLCHAIN_ARCH=armv7a; TOOLCHAIN_ARCH=i686 ;;
+        x86_64) ARCH=x86_64; CPU=x86-64; TOOLCHAIN_ARCH=x86_64 ;;
     esac
 
-    HOST=${ARCH}-linux-android
+    HOST=${TOOLCHAIN_ARCH}-linux-android
     LIBDIR="$INSTALL_DIR/lib/$ANDROID_ABI"
 
     export CC="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang"

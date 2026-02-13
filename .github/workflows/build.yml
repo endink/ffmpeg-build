@@ -88,8 +88,6 @@ jobs:
             runs-on: windows-2022
             build: |
               call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64
-              set "FFMPEG_VERSION=%TARGET_VERSION%"
-              set "INSTALL_DIR=%OUTPUT_DIR:/=\%"
               echo Start Building (%FFMPEG_VERSION%) ...
               call "%GITHUB_WORKSPACE%\build_windows.bat" static
               tree "%OUTPUT_DIR%" /F
@@ -155,6 +153,12 @@ jobs:
           echo ARCHIVE_DIR="${{ runner.temp }}" >> $GITHUB_ENV
           echo ARCHIVE_NAME=${{ env.PROJ_NAME }}-${{ matrix.target }}-${{ env.TARGET_VERSION }} >> $GITHUB_ENV
           echo Use Ouput Dir: ${GITHUB_WORKSPACE}/output
+          
+      - name: Set Windows variables
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
+        run: |
+          echo "FFMPEG_VERSION=${TARGET_VERSION}" >> $GITHUB_ENV
+          echo "INSTALL_DIR=${OUTPUT_DIR}" >> $GITHUB_ENV
        
       - name: Setup Android environment
         if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }}
