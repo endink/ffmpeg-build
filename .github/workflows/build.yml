@@ -206,17 +206,10 @@ jobs:
           move "ffmpeg-src/${{ env.TARGET_VERSION }}" "%TARGET_DIR%"
           DIR "%TARGET_DIR%"
           
-      - name: Restore VS BuildTools Cache
-        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
-        uses: actions/cache@v4
-        id: vs-cache
-        with:
-          path: C:\VS_BUILD
-          key: vsbuildtools-17.8.6
        
       # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
       - name: Install VS 17.8.6 Build Tools
-        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' && steps.vs-cache.outputs.cache-hit != 'true' }}
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
         shell: cmd
         run: |
           echo Downloading VS Build Tools...
