@@ -1,5 +1,5 @@
 @ECHO OFF
-
+setlocal enabledelayedexpansion
 REM SET FFMPEG_VERSION=4.4.6
 
 REM ==== Specify MSVC and Windows SDK versions ====
@@ -31,7 +31,7 @@ SET "SOURCE_DIR=%BUILDER_DIR%\src"
 SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
 
 
-if /I "%IS_CI%"=="true" (
+if /I "%CI%"=="true" (
     if defined OUTPUT_DIR set "INSTALL_DIR=%OUTPUT_DIR%"
     
     
@@ -40,7 +40,16 @@ if /I "%IS_CI%"=="true" (
     echo.
 )
 
-if not defined FFMPEG_DIR SET FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%
+
+if defined FFMPEG_DIR (
+    if not "%FFMPEG_DIR%"=="" (
+        if exist "%FFMPEG_DIR%\" (
+            mklink /D "%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%" "%FFMPEG_DIR%"
+        )
+    )
+)
+
+SET FFMPEG_DIR=%SOURCE_DIR%\ffmpeg-%FFMPEG_VERSION%
 
 if not exist "%FFMPEG_DIR%" (
     echo Cloning FFmpeg %FFMPEG_VERSION% ...
@@ -52,7 +61,7 @@ if not exist "%FFMPEG_DIR%" (
 )
 
 
-if /I NOT "%IS_CI%"=="true" (
+if /I NOT "%CI%"=="true" (
 
     echo Initializing MSVC environment...
     call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"  x86_amd64 %WIN_SDK_VERSION% -vcvars_ver=%VC_VERSION%

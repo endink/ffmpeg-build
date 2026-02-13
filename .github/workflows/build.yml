@@ -208,7 +208,8 @@ jobs:
             echo ERROR: MSBuild not available
             exit /b %ERRORLEVEL%
           )
-        
+          where msbuild
+          where cl
           echo VS environment ready
           
       - name: Checkout ${{ env.PROJ_NAME }} v${{ env.TARGET_VERSION }}
