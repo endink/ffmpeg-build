@@ -178,7 +178,6 @@ SET PGOPTIONS=^
  ^
 --disable-protocols ^
 --enable-protocol=file ^
---toolchain=msvc ^
  ^
 --disable-muxers
 
