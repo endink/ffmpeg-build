@@ -148,8 +148,9 @@ for ANDROID_ABI in "${ABIS[@]}"; do
         --cc=$CC \
         --cxx=$CXX \
         --prefix="$INSTALL_DIR" \
-        --includedir="$INSTALL_DIR/include" \
+        --incdir="$INSTALL_DIR/include" \
         --libdir="$LIBDIR" \
+        --shlibdir="$LIBDIR" \
         --extra-cflags="$CFLAGS" \
         --extra-cxxflags="$CXXFLAGS" \
         --extra-ldflags="$LDFLAGS" \

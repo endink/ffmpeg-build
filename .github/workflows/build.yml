@@ -160,6 +160,7 @@ jobs:
         if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }}
         run: |
           echo "ANDROID_HOME=${GITHUB_WORKSPACE}/AndroidHome" >> $GITHUB_ENV
+          echo "INSTALL_DIR=${OUTPUT_DIR}" >> $GITHUB_ENV
           if [ ! -d "${GITHUB_WORKSPACE}/AndroidHome" ];then
             mkdir "${GITHUB_WORKSPACE}/AndroidHome"
             echo "Android Home: ${GITHUB_WORKSPACE}/AndroidHome"
