@@ -88,7 +88,7 @@ jobs:
             runs-on: windows-2022
             build: |
               call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64
-              set "FFMPEG_VERSION=${{ env.TARGET_VERSION }}"
+              set "FFMPEG_VERSION=%TARGET_VERSION%"
               set "FFMPEG_DIR=%GITHUB_WORKSPACE%\ffmpeg"
               echo "FFMPEG DIR: %FFMPEG_DIR%"
               echo Start Building (%FFMPEG_VERSION%) ...
