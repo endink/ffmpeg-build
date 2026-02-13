@@ -223,7 +223,6 @@ ECHO Build ffmepg dependencies...
 
 set "MSBUILD_ARGS="
 set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:Configuration=Release"
-set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:ConfigurationType=%MSBUILD_CONFIG_TYPE%"
 set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:CLanguageStandard=Default"
 set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:DebugSymbols=false"
 set "MSBUILD_ARGS=%MSBUILD_ARGS% /p:DebugType=None"
@@ -245,9 +244,9 @@ SET liblzma_SLN=%SOURCE_DIR%\liblzma\SMP\liblzma.sln
 
 echo Start MSbuild ...
 
-msbuild "%libzlib_SLN%" !MSBUILD_ARGS! || GOTO exit
-msbuild "%libbz2_SLN%" !MSBUILD_ARGS! || GOTO exit
-msbuild "%liblzma_SLN%" !MSBUILD_ARGS! || GOTO exit
+msbuild "%libzlib_SLN%" !MSBUILD_ARGS! /p:ConfigurationType=StaticLibrary || GOTO exit
+msbuild "%libbz2_SLN%" !MSBUILD_ARGS! /p:ConfigurationType=StaticLibrary || GOTO exit
+msbuild "%liblzma_SLN%" !MSBUILD_ARGS! /p:ConfigurationType=StaticLibrary || GOTO exit
 
 pushd "%BUILDER_DIR%"
 
@@ -260,7 +259,7 @@ popd
 
 @ECHO ON
 REM msbuild "%FFMEPG_SLN%" -t:rebuild %MSBUILD_ARGS%
-msbuild "%FFMEPG_SLN%" %MSBUILD_ARGS% || GOTO exit
+msbuild "%FFMEPG_SLN%" %MSBUILD_ARGS% /p:ConfigurationType=%MSBUILD_CONFIG_TYPE% || GOTO exit
 @ECHO OFF
 
 if exist "%INSTALL_DIR%" (
