@@ -59,7 +59,7 @@ if exist "%MSYS2_FILE%" (
 REM -----------------------------
 REM 创建安装目录
 REM -----------------------------
-mkdir -p "%INSTALL_DIR%"
+if not exist "%INSTALL_DIR%\." mkdir "%INSTALL_DIR%"
 
 REM -----------------------------
 REM 解压 tar.xz
