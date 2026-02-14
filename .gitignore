@@ -1,5 +1,5 @@
 build/
-ffmepg-src/
+ffmpeg-src/
 FFVS-Project-Generator/
 msys64/
 msys2-base-*
