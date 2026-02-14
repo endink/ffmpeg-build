@@ -1,9 +1,11 @@
 build/
 ffmepg-src/
 FFVS-Project-Generator/
-
+msys64/
+msys2-base-*
 
 windows-builder/*
 !windows-builder/
 !windows-builder/project_generate.exe
 !windows-builder/smp_project_get_dependencies
+
