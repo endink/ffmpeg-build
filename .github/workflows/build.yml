@@ -193,6 +193,20 @@ jobs:
           ref: n${{ env.TARGET_VERSION }}
           path: ffmpeg-src/${{ env.TARGET_VERSION }}
           
+          
+      - name: Restore Msys64
+        id: msys64-cache
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: msys64
+          key: msys64
+          
+      - name: Setup Msys64
+        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' && steps.msys64-cache.outputs.cache-hit != 'true' }}
+        shell: cmd
+        run: call setup_msys2.bat
+          
        
       # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
       - name: Install VS 17.8.6 Build Tools
