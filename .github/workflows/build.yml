@@ -14,7 +14,6 @@ on:
         options:
         - win-x64-static-md
         - win-x64-shared-md
-        - linux-x64-static
         - android-21-ndk-r25b-static
         - android-21-ndk-r25b-shared
         - android-29-ndk-r27d-static
@@ -63,10 +62,10 @@ jobs:
           #     ./build-static_lib.sh
           #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
-          - target: linux-x64-static
-            runs-on: ubuntu-22.04
-            build: ./build-static_lib.sh
-            post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
+          # - target: linux-x64-static
+          #   runs-on: ubuntu-22.04
+          #   build: ./build-static_lib.sh
+          #   post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
           # - target: osx-arm64-static_lib
           #   runs-on: macos-13-xlarge
