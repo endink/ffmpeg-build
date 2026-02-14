@@ -193,19 +193,6 @@ jobs:
           ref: n${{ env.TARGET_VERSION }}
           path: ffmpeg-src/${{ env.TARGET_VERSION }}
           
-      - name: Move FFmpeg (Windows)
-        if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
-        shell: cmd
-        run: |
-          set "TARGET_DIR=windows-builder\src\ffmpeg-%TARGET_VERSION%"
-        
-          if not exist windows-builder\src (
-              mkdir windows-builder\src
-          )
-        
-          move "ffmpeg-src/${{ env.TARGET_VERSION }}" "%TARGET_DIR%"
-          DIR "%TARGET_DIR%"
-          
        
       # https://learn.microsoft.com/zh-cn/visualstudio/releases/2022/release-history#release-dates-and-build-numbers 
       - name: Install VS 17.8.6 Build Tools
