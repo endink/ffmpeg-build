@@ -214,6 +214,7 @@ jobs:
         shell: cmd
         run: |
           call setup_msys2.bat
+          dir .\msys64
         
           echo Downloading VS Build Tools...
           curl -L -o vs_buildtools.exe ^

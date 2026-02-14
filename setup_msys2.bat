@@ -67,7 +67,8 @@ REM -----------------------------
 echo Extracting MSYS2 to %INSTALL_DIR% ...
 
 if /i "%CI%"=="true" (
- 7z x "%MSYS2_FILE%" -o"%INSTALL_DIR%" -y
+ 7z x "%MSYS2_FILE%" -o"%INSTALL_DIR%" -y && 7z x "%INSTALL_DIR%\*.tar" -o"%INSTALL_DIR%"
+ del "%INSTALL_DIR%\*.tar"
 ) else (
  tar -xf "%MSYS2_FILE%" -C "%INSTALL_DIR%"
 )
