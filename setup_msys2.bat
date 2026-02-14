@@ -66,8 +66,11 @@ REM 解压 tar.xz
 REM -----------------------------
 echo Extracting MSYS2 to %INSTALL_DIR% ...
 
-7z x "%MSYS2_FILE%" -o"%INSTALL_DIR%" -y
-
+if /i "%CI%"=="true" (
+ 7z x "%MSYS2_FILE%" -o"%INSTALL_DIR%" -y
+) else (
+ tar -xf "%MSYS2_FILE%" -C "%INSTALL_DIR%"
+)
 if errorlevel 1 (
     echo ERROR: Failed to extract MSYS2!
     if exist "%INSTALL_DIR%\msys64\." rmdir /s /q "%INSTALL_DIR%\msys64"
