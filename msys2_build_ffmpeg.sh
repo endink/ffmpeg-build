@@ -67,19 +67,19 @@ function build_deps() {
  LZMA_DIR="$SOURCE_ROOT/lzma"
  
  
- ./msys2_build_ffmpeg.sh https://sourceware.org/pub/bzip2/bzip2-1.0.1.tar.gz "nmake" "$BZIP_DIR" || exit 1
+ ./msys2_build_dep.sh https://sourceware.org/pub/bzip2/bzip2-1.0.1.tar.gz "nmake" "$BZIP_DIR" || exit 1
  
  install -Dm644 "$BZIP_DIR/libbz2.lib" "$DEPS_INSTALL_DIR/lib/bz2.lib"
  install -Dm644 "$BZIP_DIR/bzlib.h"   "$DEPS_INSTALL_DIR/include/bzlib.h"
  
  
- ./msys2_build_ffmpeg.sh https://github.com/madler/zlib/archive/refs/tags/v1.3.1.2.tar.gz \
+ ./msys2_build_dep.sh https://github.com/madler/zlib/archive/refs/tags/v1.3.1.2.tar.gz \
   "cmake" \
   "$ZLIB_DIR" \
   "-DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_TESTING=OFF" || exit 1
   mv -f "$DEPS_INSTALL_DIR/lib/zs.lib" "$DEPS_INSTALL_DIR/lib/zlib.lib"
   
-  ./msys2_build_ffmpeg.sh https://github.com/tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.gz \
+  ./msys2_build_dep.sh https://github.com/tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.gz \
   "cmake" \
   "$LZMA_DIR" \
   "-DXZ_TOOL_XZDEC=OFF -DXZ_TOOL_LZMADEC=OFF -DXZ_TOOL_LZMAINFO=OFF -DXZ_TOOL_XZ=OFF -DXZ_DOC=OFF -Dzlib_static_suffix=lib" || exit 1
