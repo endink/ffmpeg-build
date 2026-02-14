@@ -17,6 +17,7 @@ if not defined VC_VERSION set "VC_VERSION=14.38.33130"
 if not defined WIN_SDK_VERSION set "WIN_SDK_VERSION=10.0.22621.0"
 if not defined FFMPEG_VERSION set "FFMPEG_VERSION=7.1.3"
 if not defined MSYS2_ROOT set "MSYS2_ROOT=%SCRIPT_DIR%\msys64"
+if not defined INSTALL_DIR SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
 
 if not defined BUILD_TYPE set BUILD_TYPE=static
 
@@ -24,7 +25,6 @@ if not "%BUILD_TYPE%"=="shared" set BUILD_TYPE=static
 
 
 SET "FFMPEG_DIR=%SCRIPT_DIR%\ffmpeg-src\%FFMPEG_VERSION%"
-if not defined INSTALL_DIR SET "INSTALL_DIR=%SCRIPT_DIR%\build\%FFMPEG_VERSION%\win64"
 
 echo.
 
