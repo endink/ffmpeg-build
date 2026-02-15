@@ -104,32 +104,28 @@ jobs:
 
           - target: android-21-ndk-r25b-shared
             runs-on: ubuntu-22.04
-            prepare: > 
-              ./setup_ndk.sh r25b
+            ndk: r25b
             build: |
               ./build-android.sh r25b shared 21
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
           - target: android-21-ndk-r25b-static
             runs-on: ubuntu-22.04
-            prepare: > 
-              ./setup_ndk.sh r25b
+            ndk: r25b
             build: |
               ./build-android.sh r25b static 21
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
             
           - target: android-29-ndk-r27d-shared
             runs-on: ubuntu-22.04
-            prepare: > 
-              ./setup_ndk.sh r27d
+            ndk: r27d
             build: |
               ./build-android.sh r27d shared 29
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
 
           - target: android-29-ndk-r27d-static
             runs-on: ubuntu-22.04
-            prepare: > 
-              ./setup_ndk.sh r27d
+            ndk: r27d
             build: |
               ./build-android.sh r27d static 29
             post-build: tar -czvf $ARCHIVE_DIR/$ARCHIVE_NAME.tgz -C $OUTPUT_DIR .
@@ -277,13 +273,20 @@ jobs:
           xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Setup Android NDK
+        id: setup-ndk
         if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }} 
-        run: ${{ matrix.prepare }}
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ matrix.ndk }}
+          add-to-path: false
+          local-cache: true
         
       - name: Build (Windows)
         if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
         shell: cmd
         run: ${{ matrix.build }}
+        env:
+           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
       
       - name: Build (Linux)
         if: ${{ runner.os != 'Windows' && steps.eval.outputs.enabled == 'true' }}

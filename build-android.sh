@@ -18,7 +18,7 @@ export ANDROID_NDK_VERSION=${1:-r27d}              # 第一个参数：NDK 版�
 BUILD_TYPE=${2:-static}             # 第二个参数：static 或 shared
 export ANDROID_API_LEVEL=${3:-29}                  # 第三个参数：默认 API 级别
 
-export ANDROID_NDK_ROOT=${ANDROID_HOME_DIR}/ndk/android-ndk-${ANDROID_NDK_VERSION}
+export ANDROID_NDK_ROOT=${ANDROID_NDK_ROOT:-${ANDROID_HOME_DIR}/ndk/android-ndk-${ANDROID_NDK_VERSION}}
 export ANDROID_TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
 export ANDROID_SYSROOT=$ANDROID_TOOLCHAIN/sysroot
 
@@ -83,6 +83,7 @@ clean_dir() {
 
 function build_deps() {
 
+ cd "$SCRIPT_DIR"
  set +e
 
  BZIP_DIR="$DEPS_SOURCE_ROOT/bzip2"
@@ -92,7 +93,7 @@ function build_deps() {
   CFLAGS="-std=c11 -Wall -Winline -fPIC -DANDROID -ffunction-sections -fdata-sections --sysroot=$ANDROID_SYSROOT -isystem $ANDROID_SYSROOT/usr/include/$ANDROID_HOST"
   
   #refer: https://sourceware.org/git/?p=bzip2.git;a=blob;f=Makefile;h=f8a17722e1c30b4e14fba52543e24f27bf6470bc;hb=6a8690fc8d26c815e798c588f796eabe9d684cf0
-  ./build_deps.sh \
+  /build_deps.sh \
     "libbz2.a" \
     https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz \
     "make" \

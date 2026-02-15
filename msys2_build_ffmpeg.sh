@@ -75,13 +75,12 @@ fi
 echo "Dependency Install DIR: $INSTALL_DIR"
 
 function build_deps() {
-
+ cd "$SCRIPT_DIR"
  set +e
+ 
  BZIP_DIR="$DEPS_SOURCE_ROOT/bzip2"
  ZLIB_DIR="$DEPS_SOURCE_ROOT/zlib"
  LZMA_DIR="$DEPS_SOURCE_ROOT/lzma"
- 
- 
  
  
  ./build_deps.sh "bz2.lib" https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz "nmake" "$BZIP_DIR"
@@ -124,6 +123,7 @@ function build_deps() {
 
 export DEPS_SOURCE_ROOT="$SCRIPT_DIR/build/_deps"
 export DEPS_INSTALL_DIR="$SCRIPT_DIR/build/_deps_install/win64"
+
 
 build_deps
 
