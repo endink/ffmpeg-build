@@ -11,6 +11,7 @@ FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-src/$FFMPEG_VERSION"
 
 export ANDROID_HOME_DIR=${ANDROID_HOME:-/mnt/e/WSL_Data/AndroidSDK}
 
+
 # ------------------------------
 # NDK & Android 配置
 # ------------------------------
@@ -21,6 +22,8 @@ export ANDROID_API_LEVEL=${3:-29}                  # 第三个参数：默认 AP
 export ANDROID_NDK_ROOT=${ANDROID_NDK_ROOT:-${ANDROID_HOME_DIR}/ndk/android-ndk-${ANDROID_NDK_VERSION}}
 export ANDROID_TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
 export ANDROID_SYSROOT=$ANDROID_TOOLCHAIN/sysroot
+
+echo "Android NDK: $ANDROID_NDK_ROOT"
 
 # ------------------------------
 # 安装路径
