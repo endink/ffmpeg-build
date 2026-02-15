@@ -272,14 +272,20 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
+      #- name: Setup Android NDK
+      #  id: setup-ndk
+      #  if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }} 
+      #  uses: nttld/setup-ndk@v1
+      #  with:
+      #    ndk-version: ${{ matrix.ndk }}
+      #    add-to-path: false
+      #    local-cache: true
       - name: Setup Android NDK
         id: setup-ndk
         if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }} 
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: ${{ matrix.ndk }}
-          add-to-path: false
-          local-cache: true
+        run: |
+            echo "Setup NDK: ${{ matrix.ndk }}"
+            ./build-android.sh ${{ matrix.ndk }}
         
       - name: Build (Windows)
         if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
@@ -290,8 +296,6 @@ jobs:
         if: ${{ runner.os != 'Windows' && steps.eval.outputs.enabled == 'true' }}
         shell: bash
         run: ${{ matrix.build }}
-        env:
-           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
         
       - name: Post build
         if: ${{ steps.eval.outputs.enabled == 'true' }}
