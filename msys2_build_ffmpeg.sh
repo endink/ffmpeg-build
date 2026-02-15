@@ -28,10 +28,8 @@ fi
 
 if [ "$BUILD_TYPE" = "shared" ]; then
     STATIC_FLAGS="--disable-static --enable-shared"
-    export DEPS_INSTALL_DIR="$FFMPEG_SRC/_deps_install"
 else
     STATIC_FLAGS="--enable-static --disable-shared"
-    export DEPS_INSTALL_DIR="$INSTALL_DIR"
 fi
 
 echo "Src dir: $FFMPEG_SRC"
@@ -39,17 +37,33 @@ echo "Build type: $BUILD_TYPE"
 echo "Flags: $STATIC_FLAGS"
 echo
 
-pacman -S --needed --noconfirm make automake pkg-config nasm yasm autoconf libtool coreutils
+pacman -S --needed --noconfirm make automake pkg-config nasm yasm autoconf libtool coreutils rsync
 
 nasm -v
 
 
 echo "VC_EXE_PATH: $VC_EXE_PATH"
 
+clean_dir() {
+    local dir="$1"
+
+    if [ -z "$dir" ]; then
+        echo "clean_dir: directory path is empty!"
+        return 1
+    fi
+
+    if [ ! -d "$dir" ]; then
+        echo "clean_dir: directory '$dir' does not exist, creating..."
+        mkdir -p "$dir"
+    fi
+
+    echo "Cleaning folder: $dir"
+    rm -rf "$dir"/*
+}
+
 
 echo "Build dependencies ..."
 
-export SOURCE_ROOT="$SCRIPT_DIR/build/_deps"
 
 if [ ! -z "$INSTALL_DIR" ];then
    export INSTALL_DIR=$(cygpath -u "$INSTALL_DIR")
@@ -62,116 +76,85 @@ echo "Dependency Install DIR: $INSTALL_DIR"
 
 function build_deps() {
 
- BZIP_DIR="$SOURCE_ROOT/bzip2"
- ZLIB_DIR="$SOURCE_ROOT/zlib"
- LZMA_DIR="$SOURCE_ROOT/lzma"
+ set +e
+ BZIP_DIR="$DEPS_SOURCE_ROOT/bzip2"
+ ZLIB_DIR="$DEPS_SOURCE_ROOT/zlib"
+ LZMA_DIR="$DEPS_SOURCE_ROOT/lzma"
  
  
- ./msys2_build_dep.sh https://sourceware.org/pub/bzip2/bzip2-1.0.1.tar.gz "nmake" "$BZIP_DIR" || exit 1
- 
- install -Dm644 "$BZIP_DIR/libbz2.lib" "$DEPS_INSTALL_DIR/lib/bz2.lib"
- install -Dm644 "$BZIP_DIR/bzlib.h"   "$DEPS_INSTALL_DIR/include/bzlib.h"
  
  
- ./msys2_build_dep.sh https://github.com/madler/zlib/archive/refs/tags/v1.3.1.2.tar.gz \
+ ./build_deps.sh "bz2.lib" https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz "nmake" "$BZIP_DIR"
+ ret=$?
+ if [ $ret -eq 0 ]; then
+     install -Dm644 "$BZIP_DIR/libbz2.lib" "$DEPS_INSTALL_DIR/lib/bz2.lib"
+     install -Dm644 "$BZIP_DIR/bzlib.h"   "$DEPS_INSTALL_DIR/include/bzlib.h"
+ elif [ $ret -ne 0 ] && [ $ret -ne 100 ]; then
+    exit 1
+ fi
+ 
+ 
+ ./build_deps.sh "zlib.lib" https://github.com/madler/zlib/archive/refs/tags/v1.3.1.2.tar.gz \
   "cmake" \
   "$ZLIB_DIR" \
-  "-DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_TESTING=OFF" || exit 1
-  mv -f "$DEPS_INSTALL_DIR/lib/zs.lib" "$DEPS_INSTALL_DIR/lib/zlib.lib"
+  -DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_TESTING=OFF -Dzlib_static_suffix=lib
   
-  ./msys2_build_dep.sh https://github.com/tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.gz \
+  ret=$?
+  ls -l "${DEPS_INSTALL_DIR}/lib/"
+  if [ $ret -eq 0 ];then
+    mv "${DEPS_INSTALL_DIR}/lib/zs.lib" "${DEPS_INSTALL_DIR}/lib/zlib.lib"
+  elif [ $ret -ne 0 ] && [ $ret -ne 100 ]; then
+    exit 1
+  fi
+  
+  ./build_deps.sh "lzma.lib" https://github.com/tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.gz \
   "cmake" \
   "$LZMA_DIR" \
-  "-DXZ_TOOL_XZDEC=OFF -DXZ_TOOL_LZMADEC=OFF -DXZ_TOOL_LZMAINFO=OFF -DXZ_TOOL_XZ=OFF -DXZ_DOC=OFF -Dzlib_static_suffix=lib" || exit 1
+  -DXZ_TOOL_XZDEC=OFF -DXZ_TOOL_LZMADEC=OFF -DXZ_TOOL_LZMAINFO=OFF -DXZ_TOOL_XZ=OFF -DXZ_DOC=OFF
+  
+  ret=$?
+  if [ $ret -ne 0 ] && [ $ret -ne 100 ]; then
+    exit 1
+  fi
+  
+  set -e
+  
 }
+
+
+export DEPS_SOURCE_ROOT="$SCRIPT_DIR/build/_deps"
+export DEPS_INSTALL_DIR="$SCRIPT_DIR/build/_deps_install/win64"
 
 build_deps
 
 
-PGOPTIONS="
---enable-version3 \
---enable-zlib \
---enable-bzlib \
---enable-lzma \
-\
---disable-ffplay \
---disable-sdl2 \
---disable-opengl \
---disable-vulkan \
---disable-ffnvcodec \
---disable-cuda \
---disable-amf \
---disable-libbluray \
---disable-libxml2 \
---disable-libmodplug \
---disable-libtheora \
---disable-libvorbis \
---disable-libopus \
---disable-libilbc \
-\
---disable-vaapi \
---enable-w32threads \
---disable-avfilter \
---disable-postproc \
---enable-avutil \
---enable-avcodec \
---enable-avformat \
---enable-swresample \
---enable-swscale \
-\
---disable-avdevice \
---disable-programs \
---disable-doc \
---disable-debug \
---disable-network \
---disable-devices \
---disable-encoders \
-\
---disable-decoders \
---enable-decoder=rawvideo \
---enable-decoder=aac \
---enable-decoder=mp3 \
---enable-decoder=flac \
---enable-decoder=alac \
---enable-decoder=ac3 \
---enable-decoder=eac3 \
---enable-decoder=dca \
---enable-decoder=vorbis \
---enable-decoder=pcm_s16le \
---enable-decoder=pcm_s16be \
---enable-decoder=pcm_s24le \
---enable-decoder=pcm_s32le \
---enable-decoder=pcm_f32le \
---enable-decoder=h264 \
---enable-decoder=hevc \
---enable-decoder=vp7 \
---enable-decoder=vp8 \
---enable-decoder=vp9 \
---enable-decoder=av1 \
---enable-decoder=mjpeg \
-\
---disable-parsers \
---enable-parser=aac \
---enable-parser=aac_latm \
---enable-parser=mpegaudio \
---enable-parser=flac \
---enable-parser=ac3 \
---enable-parser=dca \
---enable-parser=h264 \
---enable-parser=hevc \
---enable-parser=vp8 \
---enable-parser=vp9 \
---enable-parser=mjpeg \
---enable-parser=av1 \
-\
---enable-hardcoded-tables \
-\
---disable-protocols \
---enable-protocol=file \
-\
---disable-muxers \
---enable-muxer=mp4
-"
+merge_options() {
+    first="$1"
+    second="$2"
+
+    tmp_file=$(mktemp)
+
+    printf '%s\n' "$first" "$second" \
+    | tr ' ' '\n' \
+    | while IFS= read -r opt; do
+        [ -z "$opt" ] && continue
+
+        case "$opt" in
+            *=*) key=${opt%%=*} ;;
+            *)   key=$opt ;;
+        esac
+
+        sed -i "/^$key=/d" "$tmp_file" 2>/dev/null
+        sed -i "/^$key$/d" "$tmp_file" 2>/dev/null
+
+        echo "$opt" >> "$tmp_file"
+    done
+
+    result=$(paste -sd' ' "$tmp_file")
+    rm -f "$tmp_file"
+
+    echo "$result"
+}
 
 
 export MSYS2_ARG_CONV_EXCL="/utf-8;/O2;/MD"
@@ -206,17 +189,38 @@ echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
 export LIB="$LIB_DIR;$LIB"
 export INCLUDE="$INCLUDE_DIR;$INCLUDE"
 
-mkdir -p build
-cd build
+
+BUILD_DIR="$FFMPEG_SRC/build/win64"
+
+mkdir -p "$BUILD_DIR"
+cd "$BUILD_DIR"
 
 
 echo -e "\n=== Configure FFmpeg (MSVC) ==="
 
-../configure \
+CONFIG_ARGS="
+--enable-version3 \
+--enable-zlib \
+--enable-bzlib \
+--enable-lzma \
+--disable-protocols \
+--enable-protocol=file \
+"
+
+FINAL_ARGS="$("${SCRIPT_DIR}/get_options.sh" "$CONFIG_ARGS")"
+
+echo "$FINAL_ARGS" | tr ' ' '\n'
+
+
+
+echo -e "\nconfigure log: $BUILD_DIR/ffbuild/config.log"
+echo -e "Please wait ...\n"
+
+"$FFMPEG_SRC/configure" \
     --toolchain=msvc \
     --arch=x86_64 \
     --target-os=win64 \
-    $PGOPTIONS \
+    $FINAL_ARGS \
     $STATIC_FLAGS \
     --extra-cflags="${MSVC_CFLAGS}" \
     --extra-cxxflags="${MSVC_CFLAGS}" \
@@ -225,6 +229,9 @@ echo -e "\n=== Configure FFmpeg (MSVC) ==="
     
 
 echo "=== Build ==="
+
+clean_dir "$INSTALL_DIR"
+
 
 make -j$(nproc)
 
@@ -237,6 +244,10 @@ mkdir -p "${INSTALL_DIR}/lib"
 if [ -d "${INSTALL_DIR}/bin/" ];then
    cd "${INSTALL_DIR}/bin"
    mv -f *.lib "${INSTALL_DIR}/lib/" 2>/dev/null
+fi
+
+if [ "$BUILD_TYPE" == "static" ];then
+    rsync -av --ignore-existing "${DEPS_INSTALL_DIR}/" "${INSTALL_DIR}/"
 fi
 
 ls -l "${INSTALL_DIR}/lib"

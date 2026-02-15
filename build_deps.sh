@@ -4,44 +4,74 @@ set -e
 # ========================================
 # 参数检查
 # ========================================
-
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
     echo "Usage:"
-    echo "  $0 <url> <cmake|make|nmake> <src_dir> \"<build_args>\""
+    echo "  $0 <lib file name> <url> <cmake|make|nmake> <src_dir> [<build_args>...]"
     exit 1
 fi
 
-URL="$1"
-BUILD_SYSTEM="$2"
-SRC_DIR_NAME="$3"
-BUILD_ARGS="${4:-""}"
+# 前三个参数固定
+LIB_FILE_NAME="$1"
+URL="$2"
+BUILD_SYSTEM="$3"
+SRC_DIR_NAME="$4"
+shift 4  # 剩余参数都是 BUILD_ARGS，可选
+
+# BUILD_ARGS 可为空，也可以是单个字符串或多个参数
+if [ $# -gt 0 ]; then
+    BUILD_ARGS=("$@")
+else
+    BUILD_ARGS=()
+fi
 
 # ========================================
 # 目录定义
 # ========================================
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_ROOT=${SOURCE_ROOT:-"${SCRIPT_DIR}/_deps"}
+SOURCE_ROOT=${DEPS_SOURCE_ROOT:-"${SCRIPT_DIR}/build/_deps"}
 DOWNLOAD_DIR="$SOURCE_ROOT/download"
-BUILD_ROOT="$SRC_DIR_NAME/build"
+BUILD_DIR="$SRC_DIR_NAME/build"
 INSTALL_DIR=${DEPS_INSTALL_DIR:-"$SOURCE_ROOT/install"}
+LIB_FILE_PATH="${INSTALL_DIR}/lib/$LIB_FILE_NAME"
+
+if [ -f "$LIB_FILE_PATH" ];then
+ echo "Skip build $LIB_FILE_NAME"
+ exit 100
+fi
+
+# ------------------------------
+# Android 检查
+# ------------------------------
+if [ ! -z "$ANDROID_API_LEVEL" ] && [ -d "$ANDROID_NDK_ROOT" ] && [ ! -z "$ANDROID_ABI" ] && [ ! -z "$ANDROID_SYSROOT" ] && [ ! -z "$ANDROID_NDK_VERSION" ]
+then
+    BUILD_PLATFORM="android"
+    BUILD_DIR="$BUILD_DIR/android-${ANDROID_API_LEVEL}-ndk-${ANDROID_NDK_VERSION}/${ANDROID_ABI}"
+fi
+
+if [ -n "$MSYSTEM" ]; then
+    BUILD_PLATFORM="msys2"
+    BUILD_DIR="$BUILD_DIR/msys2"
+fi
+
 
 mkdir -p "$DOWNLOAD_DIR"
 
 SRC_DIR="$SRC_DIR_NAME"
 
 FILENAME="$(basename "$URL")"
-ARCHIVE_PATH="$DOWNLOAD_DIR/$FILENAME"
+FILE_PREFIX="${LIB_FILE_NAME%.*}"
+ARCHIVE_PATH="$DOWNLOAD_DIR/${FILE_PREFIX}_${FILENAME}"
 
 echo
 echo "==============================="
 echo "Dependenc Building: $FILENAME"
 echo ""
-echo "URL:          $URL"
-echo "Archive:      $ARCHIVE_PATH"
-echo "BuildSystem:  $BUILD_SYSTEM"
-echo "Source Dir:   $SRC_DIR"
-echo "Build Args:   $BUILD_ARGS"
+echo "Platform:       $BUILD_PLATFORM"
+echo "URL:            $URL"
+echo "Archive:        $ARCHIVE_PATH"
+echo "BuildSystem:    $BUILD_SYSTEM"
+echo "Source Dir:     $SRC_DIR"
+echo "Build Args:     ${BUILD_ARGS[*]}"
 echo "==============================="
 echo
 
@@ -53,7 +83,6 @@ OLD_MSYS2_ARG_CONV_EXCL="$MSYS2_ARG_CONV_EXCL"
 # ========================================
 function on_exit() {
     local code=$?
-    # 还原 MSYS2_ARG_CONV_EXCL
     export MSYS2_ARG_CONV_EXCL="$OLD_MSYS2_ARG_CONV_EXCL"
     
     if [ $code -ne 0 ]; then
@@ -65,11 +94,9 @@ function on_exit() {
 
 trap on_exit EXIT
 
-
 # ========================================
 # 如果源码目录不存在才下载和解压
 # ========================================
-
 if [ ! -d "$SRC_DIR" ]; then
 
     echo "Source directory not found. Preparing source..."
@@ -96,21 +123,15 @@ if [ ! -d "$SRC_DIR" ]; then
             tar -xJf "$ARCHIVE_PATH" --strip-components=1 -C "$SRC_DIR"
             ;;
         *.zip)
-            # zip 无法直接 strip-components
             TMP_DIR="$DOWNLOAD_DIR/__tmp_extract"
             rm -rf "$TMP_DIR"
             mkdir -p "$TMP_DIR"
-
             unzip -q "$ARCHIVE_PATH" -d "$TMP_DIR"
-
-            # 取第一个子目录
             FIRST_DIR="$(find "$TMP_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-
             if [ -z "$FIRST_DIR" ]; then
                 echo "Zip structure unexpected."
                 exit 1
             fi
-
             mv "$FIRST_DIR"/* "$SRC_DIR"
             rm -rf "$TMP_DIR"
             ;;
@@ -127,75 +148,94 @@ fi
 
 cd "$SRC_DIR"
 
-# mkdir -p "$BUILD_ROOT"
+
+
+echo "INSTALL: ${INSTALL_DIR}"
 
 mkdir -p "$INSTALL_DIR/lib"
 mkdir -p "$INSTALL_DIR/include"
 
 # ========================================
-# 构建
+# 构建平台参数
 # ========================================
-
-
-INSTALL_DIR_WIN=$(cygpath -w "$INSTALL_DIR")
-SRC_DIR_WIN=$(cygpath -w "$SRC_DIR")
-BUILD_DIR_WIN=$(cygpath -w "$BUILD_ROOT")
-
-
+case "$BUILD_PLATFORM" in
+    android)
+        PLATFORM_CMAKE_ARGS=(
+            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
+            -DANDROID_ABI="${ANDROID_ABI}"
+            -DANDROID_STL="c++_static"
+            -DANDROID_PLATFORM="android-${ANDROID_API_LEVEL}"
+        )
+        PLATFORM_CFLAGS="-fPIC -DANDROID -ffunction-sections -fdata-sections"
+        ;;
+    msys2)
+        INSTALL_DIR=$(cygpath -w "$INSTALL_DIR")
+        SRC_DIR=$(cygpath -w "$SRC_DIR")
+        BUILD_DIR=$(cygpath -w "$BUILD_DIR")
+        PLATFORM_CMAKE_ARGS=(-G "Ninja")
+        PLATFORM_CFLAGS="/utf-8 /O2 /MD"
+        ;;
+    *)
+        echo "Unknown platform !!"
+        ;;
+esac
 
 export MSYS2_ARG_CONV_EXCL="*"
 
-MSVC_CFLAGS="/utf-8 /O2 /MD"
-
+# ========================================
+# 构建逻辑
+# ========================================
 if [ "$BUILD_SYSTEM" = "cmake" ]; then
 
-    mkdir -p build
-    cd build
+    mkdir -p "$BUILD_DIR"
 
     echo "Configuring (CMake)..."
-
-    cmake -G "Ninja" \
-        -S "$SRC_DIR_WIN" \
-        -B "$BUILD_DIR_WIN" \
+   
+    cmake \
+        -S "$SRC_DIR" \
+        -B "$BUILD_DIR" \
+        "${PLATFORM_CMAKE_ARGS[@]}" \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=OFF \
-        -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR_WIN" \
+        -DBUILD_TESTING=OFF \
+        -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL \
-        -DCMAKE_C_FLAGS="$MSVC_CFLAGS" \
-        -DCMAKE_CXX_FLAGS="$MSVC_CFLAGS" \
-        $BUILD_ARGS \
-        ..
+        -DCMAKE_C_FLAGS="$PLATFORM_CFLAGS" \
+        -DCMAKE_CXX_FLAGS="$PLATFORM_CFLAGS" \
+        "${BUILD_ARGS[@]}"
 
     echo "Building..."
-    cmake --build . --parallel
+    cmake --build "$BUILD_DIR" --config Release --parallel
     echo "Installing..."
-    cmake --install .
+    cmake --install "$BUILD_DIR" --config Release --prefix "$INSTALL_DIR"
 
 elif [ "$BUILD_SYSTEM" = "make" ]; then
 
-    echo "Configuring (Autotools)..."
+    EXTRA_ARGS=("${BUILD_ARGS[@]}")
 
     if [ -f "./autogen.sh" ]; then
-        ./autogen.sh
+        echo "Configuring (autogen)..."
+        ./autogen.sh "${EXTRA_ARGS[@]}"
+        EXTRA_ARGS=()
     fi
 
     if [ -f "./configure" ]; then
+        echo "Configuring (configure file)..."
         ./configure \
-            --prefix="$INSTALL_DIR_WIN" \
+            --prefix="$INSTALL_DIR" \
             --disable-shared \
             --enable-static \
-            --extra-cflags="$MSVC_CFLAGS" \
-            --extra-cxxflags="$MSVC_CFLAGS" \
-            $BUILD_ARGS
-    else
-        echo "No configure script found."
-        exit 1
+            --extra-cflags="$PLATFORM_CFLAGS" \
+            --extra-cxxflags="$PLATFORM_CFLAGS" \
+            "${EXTRA_ARGS[@]}"
+        EXTRA_ARGS=()
     fi
-
+    
     echo "Building..."
-    make -j"$(nproc)"
+    make clean
+    make -j"$(nproc)" "${EXTRA_ARGS[@]}"
     echo "Installing..."
-    make install
+    make install "${EXTRA_ARGS[@]}"
 
 elif [ "$BUILD_SYSTEM" = "nmake" ]; then
 
@@ -208,13 +248,11 @@ elif [ "$BUILD_SYSTEM" = "nmake" ]; then
 
     if [ -f "makefile.msc" ]; then
         echo "Start nmake ..."
-        nmake /D /f "makefile.msc" $BUILD_ARGS
+        nmake /D /f "makefile.msc" "${BUILD_ARGS[@]}"
     else
         echo "makefile.msc not found."
         exit 1
     fi
-
-
 
 else
     echo "Unsupported build system: $BUILD_SYSTEM"

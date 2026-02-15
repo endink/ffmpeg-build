@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-set -x
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
@@ -10,23 +9,23 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 FFMPEG_VERSION=${FFMPEG_VERSION:-4.4.6}
 FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-src/$FFMPEG_VERSION"
 
-ANDROID_HOME_DIR=${ANDROID_HOME:-/mnt/e/WSL_Data/AndroidSDK}
+export ANDROID_HOME_DIR=${ANDROID_HOME:-/mnt/e/WSL_Data/AndroidSDK}
 
 # ------------------------------
 # NDK & Android 配置
 # ------------------------------
-NDK_VERSION=${1:-r27d}              # 第一个参数：NDK 版本
+export ANDROID_NDK_VERSION=${1:-r27d}              # 第一个参数：NDK 版本
 BUILD_TYPE=${2:-static}             # 第二个参数：static 或 shared
-API_LEVEL=${3:-29}                  # 第三个参数：默认 API 级别
+export ANDROID_API_LEVEL=${3:-29}                  # 第三个参数：默认 API 级别
 
-NDK_ROOT=${ANDROID_HOME_DIR}/ndk/android-ndk-${NDK_VERSION}
-TOOLCHAIN=$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
-SYSROOT=$TOOLCHAIN/sysroot
+export ANDROID_NDK_ROOT=${ANDROID_HOME_DIR}/ndk/android-ndk-${ANDROID_NDK_VERSION}
+export ANDROID_TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
+export ANDROID_SYSROOT=$ANDROID_TOOLCHAIN/sysroot
 
 # ------------------------------
 # 安装路径
 # ------------------------------
-INSTALL_DIR=${INSTALL_DIR:-$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${NDK_VERSION}-android-${API_LEVEL}}
+INSTALL_DIR=${INSTALL_DIR:-$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${ANDROID_NDK_VERSION}-android-${ANDROID_API_LEVEL}}
 
 # ------------------------------
 # 多 ABI 支持
@@ -52,52 +51,86 @@ fi
 # ------------------------------
 # FFmpeg configure 参数
 # ------------------------------
-CONFIG_ARGS=(
-  --enable-avutil
-  --enable-avcodec
-  --enable-avformat
-  --enable-swresample
-  --enable-swscale
-  --enable-optimizations
-  --disable-programs
-  --disable-doc
-  --disable-debug
-  --disable-ffplay
-  --disable-ffprobe
-  --disable-avdevice
-  --disable-network
-  --disable-postproc
-  --disable-avfilter
-  --disable-bsfs
-  --disable-encoders
-  --disable-decoders
-  --disable-parsers
-  --disable-pthreads
-  --disable-w32threads
-  --disable-os2threads
-  --disable-sdl2
-  --disable-opengl
-  --disable-vulkan
-  --disable-ffnvcodec
-  --disable-cuda
-  --disable-amf
-  --disable-libbluray
-  --disable-libxml2
-  --disable-libmodplug
-  --disable-libtheora
-  --disable-libvorbis
-  --disable-libopus
-  --disable-libilbc
-  --disable-xlib
-  --disable-zlib
-  --disable-autodetect
-  --enable-protocol=file
-  --enable-protocol=pipe
-  --enable-protocol=fd
-  --enable-decoder=aac,aac_latm,mp3,flac,vorbis,opus,alac,ac3,eac3,dca,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,pcm_alaw,pcm_mulaw,h264,hevc,vp7,vp8,vp9,av1,mpeg4,mpegvideo,mjpeg,rawvideo
-  --enable-parser=aac,aac_latm,mpegaudio,ac3,dca,h264,hevc,av1,mpeg4video,mpegvideo,vp8,vp9,mjpeg
-  --disable-muxers
-)
+CONFIG_ARGS="
+--enable-zlib \
+--enable-bzlib \
+--enable-lzma \
+--disable-autodetect \
+--disable-pthreads \
+--disable-w32threads \
+--disable-os2threads \
+--disable-protocols \
+--enable-protocol=file,fd
+"
+
+clean_dir() {
+    local dir="$1"
+
+    if [ -z "$dir" ]; then
+        echo "clean_dir: directory path is empty!"
+        return 1
+    fi
+
+    if [ ! -d "$dir" ]; then
+        echo "clean_dir: directory '$dir' does not exist, creating..."
+        mkdir -p "$dir"
+    fi
+
+    echo "Cleaning folder: $dir"
+    rm -rf "$dir"/*
+}
+
+
+function build_deps() {
+
+ set +e
+
+ BZIP_DIR="$DEPS_SOURCE_ROOT/bzip2"
+ ZLIB_DIR="$DEPS_SOURCE_ROOT/zlib"
+ LZMA_DIR="$DEPS_SOURCE_ROOT/lzma"
+ 
+  CFLAGS="-std=c11 -Wall -Winline -fPIC -DANDROID -ffunction-sections -fdata-sections --sysroot=$ANDROID_SYSROOT -isystem $ANDROID_SYSROOT/usr/include/aarch64-linux-android"
+  
+  #refer: https://sourceware.org/git/?p=bzip2.git;a=blob;f=Makefile;h=f8a17722e1c30b4e14fba52543e24f27bf6470bc;hb=6a8690fc8d26c815e798c588f796eabe9d684cf0
+  ./build_deps.sh \
+    "libbz2.a" \
+    https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz \
+    "make" \
+    "$BZIP_DIR" \
+    "libbz2.a" \
+    "AR=$AR" \
+    "CC=$CC" \
+    "CFLAGS=$CFLAGS" \
+    "LDFLAGS=-static-libstdc++ -fPIC" \
+    "PREFIX=$DEPS_INSTALL_DIR" 
+  
+  ret=$?
+  if [ $ret -ne 0 ] && [ $ret -ne 100 ]; then
+    exit 1
+  fi
+ 
+ # ./build_deps.sh \
+ #  "libz.a" \
+ #  https://github.com/madler/zlib/archive/refs/tags/v1.3.1.2.tar.gz \
+ #  "cmake" \
+ #  "$ZLIB_DIR" \
+ #  -DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_TESTING=OFF || exit 1
+  
+  ./build_deps.sh \
+  "liblzma.a" \
+  https://github.com/tukaani-project/xz/releases/download/v5.8.2/xz-5.8.2.tar.gz \
+  "cmake" \
+  "$LZMA_DIR" \
+  -DXZ_TOOL_XZDEC=OFF -DXZ_TOOL_LZMADEC=OFF -DXZ_TOOL_LZMAINFO=OFF -DXZ_TOOL_XZ=OFF -DXZ_DOC=OFF 
+  
+  ret=$?
+  if [ $ret -ne 0 ] && [ $ret -ne 100 ]; then
+    exit 1
+  fi
+  set -e
+}
+
+ORIGIN_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 
 # ------------------------------
 # 循环构建每个 ABI
@@ -136,45 +169,73 @@ for ANDROID_ABI in "${ABIS[@]}"; do
 
     esac
 
+
+    export ANDROID_ABI="$ANDROID_ABI"
     LIBDIR="$INSTALL_DIR/lib/$ANDROID_ABI"
 
-    export CC="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang"
-    export CXX="$TOOLCHAIN/bin/${HOST}${API_LEVEL}-clang++"
-    export AR="$TOOLCHAIN/bin/llvm-ar"
-    export STRIP="$TOOLCHAIN/bin/llvm-strip"
-    # export LD="$TOOLCHAIN/bin/ld"
+    export ANDROID_HOST="${HOST}"
+    export CC="$ANDROID_TOOLCHAIN/bin/${HOST}${ANDROID_API_LEVEL}-clang"
+    export CXX="$ANDROID_TOOLCHAIN/bin/${HOST}${ANDROID_API_LEVEL}-clang++"
+    export AR="$ANDROID_TOOLCHAIN/bin/llvm-ar"
+    export STRIP="$ANDROID_TOOLCHAIN/bin/llvm-strip"
     export LD="$CC"
+    export RANLIB="$ANDROID_TOOLCHAIN/bin/llvm-ranlib"
+    
+    
+    export DEPS_INSTALL_DIR="$SCRIPT_DIR/build/_deps_install/android-${ANDROID_API_LEVEL}-ndk-${ANDROID_NDK_VERSION}/${ANDROID_ABI}"
+    export DEPS_SOURCE_ROOT="$SCRIPT_DIR/build/_deps"
+    
+    PKG_DIR="${DEPS_INSTALL_DIR}/lib/pkgconfig"
+    export PKG_CONFIG_PATH="${PKG_DIR}:${ORIGIN_PKG_CONFIG_PATH}"
+    
+    build_deps
+    
+    echo "Depedencies build successful !"
 
-    CFLAGS="-fPIC -DANDROID -ffunction-sections -fdata-sections"
+    CFLAGS="-fPIC -DANDROID -ffunction-sections -fdata-sections -I${DEPS_INSTALL_DIR}/include -DLZMA_API_STATIC"
     if [ "$BUILD_TYPE" == "shared" ]; then
         CFLAGS="$CFLAGS -Os"
     fi
-    CXXFLAGS="$CFLAGS"
     
-    LDFLAGS="-static-libstdc++ -fPIC"
+    LDFLAGS="-static-libstdc++ -fPIC -L${DEPS_INSTALL_DIR}/lib"
     if [ "$BUILD_TYPE" == "shared" ]; then
         LDFLAGS="$LDFLAGS -Wl,--gc-sections"
     fi
+    
+    # export LDFLAGS="$LDFLAGS"
+    # export CXXFLAGS="CXXFLAGS"
+    
+   
 
-    # 创建 ABI 目录
-    mkdir -p "$LIBDIR"
-    mkdir -p "$INSTALL_DIR/include"
+    BUILD_DIR="${FFMPEG_DIR}/build/android/ndk-${ANDROID_NDK_VERSION}-android-${ANDROID_API_LEVEL}/$ANDROID_ABI"
+    if [ -d "$BUILD_DIR" ];then
+        echo "Clean build ...."
+        rm -rf "$BUILD_DIR"
+    fi
+    
+    mkdir -p "$BUILD_DIR"
+    cd "$BUILD_DIR"
+    
+    FINAL_ARGS="$("${SCRIPT_DIR}/get_options.sh" "$CONFIG_ARGS")"
 
-    cd "$FFMPEG_DIR"
+    echo -e "\nFFmpeg Configuration: "
+    echo "$FINAL_ARGS" | tr ' ' '\n'
+    
+    echo -e "\nconfigure log: $BUILD_DIR/ffbuild/config.log"
+    echo -e "Please wait ...\n"
 
-    # 清理旧编译
-    make distclean || true
-    rm -rf "$LIBDIR"
+
 
     # 配置
-    ./configure \
+    "$FFMPEG_DIR/configure" \
+        --enable-zlib \
+        --enable-bzlib \
+        --enable-lzma \
         --enable-cross-compile \
         --arch=$ARCH \
         --cpu=$CPU \
         --target-os=android \
-        $BUILD_FLAG \
-        --enable-pic \
-        --sysroot=$SYSROOT \
+        --sysroot="$ANDROID_SYSROOT" \
         --cc=$CC \
         --cxx=$CXX \
         --strip=$STRIP \
@@ -182,16 +243,25 @@ for ANDROID_ABI in "${ABIS[@]}"; do
         --incdir="$INSTALL_DIR/include" \
         --libdir="$LIBDIR" \
         --shlibdir="$LIBDIR" \
-        --extra-cflags="$CFLAGS" \
-        --extra-cxxflags="$CXXFLAGS" \
-        --extra-ldflags="$LDFLAGS" \
-        "${CONFIG_ARGS[@]}"
+        --extra-cflags="${CFLAGS}" \
+        --extra-cxxflags="${CFLAGS}" \
+        --extra-ldflags="${LDFLAGS}" \
+        ${FINAL_ARGS}
+    
+    
+    clean_dir "$LIBDIR"
+    clean_dir "$INSTALL_DIR/include"
 
     make -j$(nproc)
     make install
+    
+    if [ "$BUILD_TYPE" == "static" ];then
+        rsync -av --ignore-existing "${DEPS_INSTALL_DIR}/include/" "${INSTALL_DIR}/include"
+        rsync -av --ignore-existing "${DEPS_INSTALL_DIR}/lib/" "$LIBDIR"
+    fi
 
     echo "------------------------------------------"
-    echo "FFmpeg build for $ANDROID_ABI (API $API_LEVEL, $BUILD_TYPE) finished:"
+    echo "FFmpeg build for $ANDROID_ABI (API $ANDROID_API_LEVEL, $BUILD_TYPE) finished:"
     echo "  include: $INSTALL_DIR/include"
     echo "  lib    : $LIBDIR"
     echo "------------------------------------------"
