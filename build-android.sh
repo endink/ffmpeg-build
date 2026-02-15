@@ -93,7 +93,7 @@ function build_deps() {
   CFLAGS="-std=c11 -Wall -Winline -fPIC -DANDROID -ffunction-sections -fdata-sections --sysroot=$ANDROID_SYSROOT -isystem $ANDROID_SYSROOT/usr/include/$ANDROID_HOST"
   
   #refer: https://sourceware.org/git/?p=bzip2.git;a=blob;f=Makefile;h=f8a17722e1c30b4e14fba52543e24f27bf6470bc;hb=6a8690fc8d26c815e798c588f796eabe9d684cf0
-  /build_deps.sh \
+  ./build_deps.sh \
     "libbz2.a" \
     https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz \
     "make" \
