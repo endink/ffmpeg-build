@@ -285,13 +285,13 @@ jobs:
         if: ${{ runner.os == 'Windows' && steps.eval.outputs.enabled == 'true' }}
         shell: cmd
         run: ${{ matrix.build }}
-        env:
-           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
       
       - name: Build (Linux)
         if: ${{ runner.os != 'Windows' && steps.eval.outputs.enabled == 'true' }}
         shell: bash
         run: ${{ matrix.build }}
+        env:
+           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
         
       - name: Post build
         if: ${{ steps.eval.outputs.enabled == 'true' }}
