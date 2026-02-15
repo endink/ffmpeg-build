@@ -87,6 +87,7 @@ jobs:
           - target: win-x64-static-md
             runs-on: windows-2022
             build: |
+              
               call C:\VS_BUILD\Common7\Tools\VsDevCmd.bat -arch=x64 -host_arch=x64
               echo Start Building (%FFMPEG_VERSION%) ...
               call "%GITHUB_WORKSPACE%\build-windows.bat" static
@@ -168,6 +169,7 @@ jobs:
       - name: Setup Android environment
         if: ${{ startsWith(matrix.target, 'android') && steps.eval.outputs.enabled == 'true' }}
         run: |
+          echo "FFMPEG_VERSION=${TARGET_VERSION}" >> $GITHUB_ENV
           echo "ANDROID_HOME=${GITHUB_WORKSPACE}/AndroidHome" >> $GITHUB_ENV
           echo "INSTALL_DIR=${OUTPUT_DIR}" >> $GITHUB_ENV
           if [ ! -d "${GITHUB_WORKSPACE}/AndroidHome" ];then
