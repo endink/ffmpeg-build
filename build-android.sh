@@ -23,12 +23,19 @@ export ANDROID_NDK_ROOT=${ANDROID_NDK_ROOT:-${ANDROID_HOME_DIR}/ndk/android-ndk-
 export ANDROID_TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
 export ANDROID_SYSROOT=$ANDROID_TOOLCHAIN/sysroot
 
-echo "Android NDK: $ANDROID_NDK_ROOT"
 
 # ------------------------------
 # 安装路径
 # ------------------------------
 INSTALL_DIR=${INSTALL_DIR:-$SCRIPT_DIR/build/${FFMPEG_VERSION}/android/ndk-${ANDROID_NDK_VERSION}-android-${ANDROID_API_LEVEL}}
+
+
+echo "FFmpeg Version: $FFMPEG_VERSION"
+echo "BUILD TYPE: $BUILD_TYPE"
+echo "Source DIR: $FFMPEG_DIR"
+echo "Install DIR: $INSTALL_DIR"
+echo "Android NDK: $ANDROID_NDK_ROOT"
+echo ""
 
 # ------------------------------
 # 多 ABI 支持
